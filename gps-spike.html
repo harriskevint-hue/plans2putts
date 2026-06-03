@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS Spike — Step 0 Check</title>
+<style>
+  :root {
+    --bg: #0a0e0a;
+    --panel: #121812;
+    --line: #2a3528;
+    --ink: #e8f0e4;
+    --dim: #7d8a78;
+    --go: #4ade80;
+    --warn: #fbbf24;
+    --stop: #f87171;
+    --accent: #4ade80;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+    min-height: 100vh;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .label { font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+
+  /* The big verdict + primary readout — sized to be legible on the glasses */
+  .hero {
+    background: var(--panel);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+  }
+  #verdict {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    margin-bottom: 14px;
+    min-height: 1.2em;
+  }
+  #verdict.go { color: var(--go); }
+  #verdict.warn { color: var(--warn); }
+  #verdict.stop { color: var(--stop); }
+  #verdict.idle { color: var(--dim); }
+
+  .accuracy-wrap { margin: 6px 0 2px; }
+  #accuracy {
+    font-size: 4rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--accent);
+  }
+  #accuracyYards { font-size: 1.1rem; color: var(--dim); margin-top: 6px; }
+
+  .controls { display: flex; gap: 10px; }
+  button {
+    flex: 1;
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 16px;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  button:active { transform: scale(0.98); }
+  #startBtn { border-color: var(--go); color: var(--go); }
+  #stopBtn { border-color: var(--stop); color: var(--stop); }
+  button:disabled { opacity: 0.35; cursor: default; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .stat .val { font-size: 1.35rem; font-weight: 700; margin-top: 4px; word-break: break-all; }
+
+  .log-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+  }
+  #log {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--dim);
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  #copyBtn {
+    margin-top: 10px;
+    font-size: 0.78rem;
+    padding: 10px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .footnote { font-size: 0.72rem; color: var(--dim); line-height: 1.5; }
+  .secure-warn {
+    background: #2a1a0a;
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+  <div class="label">GPS Spike · Step 0 capability check</div>
+
+  <div id="secureWarn" class="secure-warn hidden"></div>
+
+  <div class="hero">
+    <div class="label">Verdict</div>
+    <div id="verdict" class="idle">Press START to begin</div>
+    <div class="accuracy-wrap">
+      <div class="label">Current accuracy radius</div>
+      <div id="accuracy">—</div>
+      <div id="accuracyYards"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="startBtn">Start</button>
+    <button id="stopBtn" disabled>Stop</button>
+  </div>
+
+  <div class="grid">
+    <div class="stat"><div class="label">Updates received</div><div class="val" id="count">0</div></div>
+    <div class="stat"><div class="label">Since last update</div><div class="val" id="sinceLast">—</div></div>
+    <div class="stat"><div class="label">Latitude</div><div class="val" id="lat">—</div></div>
+    <div class="stat"><div class="label">Longitude</div><div class="val" id="lng">—</div></div>
+    <div class="stat"><div class="label">Best accuracy</div><div class="val" id="best">—</div></div>
+    <div class="stat"><div class="label">Worst accuracy</div><div class="val" id="worst">—</div></div>
+  </div>
+
+  <div class="log-panel">
+    <div class="label">Event log</div>
+    <div id="log">Waiting to start…</div>
+    <button id="copyBtn">Copy log to clipboard (to paste back for review)</button>
+  </div>
+
+  <div class="footnote">
+    What this checks: whether the Web Apps runtime exposes continuous location
+    (navigator.geolocation.watchPosition) and how accurate it is. Accuracy is a
+    radius — smaller is better. For a golf rangefinder, under ~5 m (≈5.5 yd) is good,
+    5–15 m is marginal, over 15 m is too coarse. Run it OUTDOORS with a clear sky view.
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var watchId = null;
+  var count = 0;
+  var best = Infinity;
+  var worst = 0;
+  var lastTs = null;
+  var tickTimer = null;
+
+  var el = {
+    verdict: document.getElementById("verdict"),
+    accuracy: document.getElementById("accuracy"),
+    accuracyYards: document.getElementById("accuracyYards"),
+    count: document.getElementById("count"),
+    sinceLast: document.getElementById("sinceLast"),
+    lat: document.getElementById("lat"),
+    lng: document.getElementById("lng"),
+    best: document.getElementById("best"),
+    worst: document.getElementById("worst"),
+    log: document.getElementById("log"),
+    startBtn: document.getElementById("startBtn"),
+    stopBtn: document.getElementById("stopBtn"),
+    copyBtn: document.getElementById("copyBtn"),
+    secureWarn: document.getElementById("secureWarn")
+  };
+
+  var logLines = [];
+  function log(msg) {
+    var t = new Date().toLocaleTimeString();
+    logLines.push("[" + t + "] " + msg);
+    if (logLines.length > 200) logLines.shift();
+    el.log.textContent = logLines.join("\n");
+    el.log.scrollTop = el.log.scrollHeight;
+  }
+
+  function setVerdict(text, cls) {
+    el.verdict.textContent = text;
+    el.verdict.className = cls;
+  }
+
+  function metersToYards(m) { return m * 1.09361; }
+
+  // Secure-context check: geolocation only works on https:// or localhost.
+  if (!window.isSecureContext) {
+    el.secureWarn.classList.remove("hidden");
+    el.secureWarn.textContent =
+      "Heads up: this page is not running in a secure context (https or localhost). " +
+      "Browsers block location unless the page is served securely. If location fails, " +
+      "that is likely why — host the file over https or via localhost.";
+  }
+
+  // Feature detection.
+  if (!("geolocation" in navigator)) {
+    setVerdict("FAIL — geolocation API not available in this runtime", "stop");
+    el.startBtn.disabled = true;
+    log("navigator.geolocation is NOT present. This is a hard blocker for the GPS approach.");
+  } else {
+    log("navigator.geolocation is present. Ready to start.");
+  }
+
+  function judge(accuracyMeters) {
+    // Need a few updates before declaring continuous tracking works.
+    if (count < 2) {
+      setVerdict("Receiving location… keep it running", "warn");
+      return;
+    }
+    if (accuracyMeters <= 5) {
+      setVerdict("PASS — continuous fix, good precision", "go");
+    } else if (accuracyMeters <= 15) {
+      setVerdict("MARGINAL — works, but precision is loose for golf", "warn");
+    } else {
+      setVerdict("WEAK — updating, but accuracy too coarse", "stop");
+    }
+  }
+
+  function onSuccess(pos) {
+    var c = pos.coords;
+    count += 1;
+    lastTs = Date.now();
+
+    var acc = c.accuracy; // meters, 95% confidence radius
+    if (acc < best) best = acc;
+    if (acc > worst) worst = acc;
+
+    el.accuracy.textContent = acc.toFixed(1) + " m";
+    el.accuracyYards.textContent = "≈ " + metersToYards(acc).toFixed(1) + " yd";
+    el.count.textContent = count;
+    el.lat.textContent = c.latitude.toFixed(6);
+    el.lng.textContent = c.longitude.toFixed(6);
+    el.best.textContent = best.toFixed(1) + " m";
+    el.worst.textContent = worst.toFixed(1) + " m";
+
+    log("Fix #" + count + " — acc " + acc.toFixed(1) + " m, lat " +
+        c.latitude.toFixed(6) + ", lng " + c.longitude.toFixed(6));
+
+    judge(acc);
+  }
+
+  function onError(err) {
+    var map = {
+      1: "PERMISSION_DENIED — location access was blocked. Allow it and retry.",
+      2: "POSITION_UNAVAILABLE — the runtime could not get a position (no GPS/signal).",
+      3: "TIMEOUT — no fix within the time limit."
+    };
+    var msg = map[err.code] || ("Unknown error (code " + err.code + ")");
+    log("ERROR: " + msg + " — " + (err.message || ""));
+    if (err.code === 1) {
+      setVerdict("BLOCKED — location permission denied", "stop");
+    } else {
+      setVerdict("NO FIX — " + (map[err.code] || "error"), "stop");
+    }
+  }
+
+  function tick() {
+    if (!lastTs) return;
+    var secs = Math.round((Date.now() - lastTs) / 1000);
+    el.sinceLast.textContent = secs + "s ago";
+    // If updates stop coming for a long while, surface it.
+    if (secs > 20 && watchId !== null) {
+      setVerdict("STALLED — no new updates for " + secs + "s", "warn");
+    }
+  }
+
+  function start() {
+    if (!("geolocation" in navigator)) return;
+    count = 0; best = Infinity; worst = 0; lastTs = null;
+    el.startBtn.disabled = true;
+    el.stopBtn.disabled = false;
+    setVerdict("Acquiring location…", "warn");
+    log("watchPosition started (enableHighAccuracy: true).");
+
+    watchId = navigator.geolocation.watchPosition(onSuccess, onError, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 30000
+    });
+
+    tickTimer = setInterval(tick, 1000);
+  }
+
+  function stop() {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+    el.startBtn.disabled = false;
+    el.stopBtn.disabled = true;
+    log("Stopped. Total fixes: " + count +
+        (count ? (" | best " + best.toFixed(1) + " m, worst " + worst.toFixed(1) + " m") : ""));
+    if (count === 0) {
+      setVerdict("No fixes received — see log", "stop");
+    }
+  }
+
+  function copyLog() {
+    var summary =
+      "GPS SPIKE RESULTS\n" +
+      "Secure context: " + window.isSecureContext + "\n" +
+      "Geolocation available: " + ("geolocation" in navigator) + "\n" +
+      "User agent: " + navigator.userAgent + "\n" +
+      "Total fixes: " + count + "\n" +
+      "Best accuracy: " + (isFinite(best) ? best.toFixed(1) + " m" : "n/a") + "\n" +
+      "Worst accuracy: " + (worst ? worst.toFixed(1) + " m" : "n/a") + "\n" +
+      "----- EVENT LOG -----\n" +
+      logLines.join("\n");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(summary).then(
+        function () { log("Results copied to clipboard."); },
+        function () { fallbackCopy(summary); }
+      );
+    } else {
+      fallbackCopy(summary);
+    }
+  }
+
+  function fallbackCopy(text) {
+    el.log.textContent = text; // at least make it selectable
+    log("Clipboard unavailable — log shown above, select and copy manually.");
+  }
+
+  el.startBtn.addEventListener("click", start);
+  el.stopBtn.addEventListener("click", stop);
+  el.copyBtn.addEventListener("click", copyLog);
+})();
+</script>
+</body>
+</html>
