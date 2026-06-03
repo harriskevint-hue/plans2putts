@@ -1,118 +1,116 @@
-# Step 0 — Go / No-Go Validation (Cloud build)
+# Step 0 — Go / No-Go Validation
 
-**Purpose:** Before building the golf HUD app, prove the one thing the project truly
-depends on — usable GPS on the glasses — and stand up the cloud setup. Everything
-lives in the cloud; nothing on your laptop.
-
-This file is written for a non-programmer. You can also hand it to Claude Code on the
-web and say "help me work through STEP-0-CHECKLIST.md."
-
-**Target course:** White Horse Golf Club, 22795 Three Lions Pl NE, Kingston, WA 98346
-(18 holes; approx 47.7696, -122.5293)
+**Project:** Plans2Putts — golf rangefinder HUD for Meta Ray-Ban Display
+**Last updated:** June 3, 2026
 
 ---
 
-## Your cloud stack (using accounts you already have)
+## Completed
 
-| Layer | Tool | Why |
+- [x] **Meta Wearables Developer Center** — registered, org "Kevin T Harris Team,"
+  project "Plans2Putts" created
+- [x] **GitHub repo** — github.com/harriskevint-hue/plans2putts (public)
+- [x] **GitHub Pages** — live at harriskevint-hue.github.io/plans2putts/ (HTTPS)
+- [x] **GPS spike — desktop test** — geolocation API present, continuous updates,
+  coordinates correct area. 84m accuracy (expected indoors on WiFi)
+- [x] **GPS spike — outdoor phone test** — **PASSED at 3.0 m (≈ 3.3 yd)**.
+  Continuous updates, strong accuracy. Gate 1 cleared.
+- [x] **Course mapper deployed** — multi-course support, dogleg/layup point types,
+  custom course names
+- [x] **Friend mapping guide** — ready to send with the mapper link
+- [x] **Data strategy** — three-layer approach finalized (tee sheets + satellite
+  imagery + local player knowledge)
+- [x] **Shot tracking** — scoped for Phase 3 (Airtable for POC, AWS for scale)
+
+## Gate 1 result: PASS
+
+Outdoor phone GPS accuracy: **3.0 m**. This is well within the ≤5 m threshold
+needed for a usable golf rangefinder. Continuous updates confirmed.
+The project's critical technical risk is cleared.
+
+---
+
+## Cloud stack
+
+| Layer | Tool | Status |
 |---|---|---|
-| Code home | **GitHub** repo | Code lives in the cloud, not your laptop |
-| Building | **Claude Code on the web** (claude.ai/code) | Builds in the cloud against your repo; needs Max ✓ |
-| Hosting (the URL the glasses load) | **GitHub Pages** | Free, automatic HTTPS (required for GPS), publishes from the repo |
-| Course data | A small **JSON file** in the repo | Loads instantly, works even with no signal mid-round |
-| (Optional) friendly data editing | **Airtable** or **Google Sheets** | Edit hole coordinates in a grid; Claude Code syncs it to the app |
-| (Reserved for later) | **AWS** | Only if you later want cross-device saved rounds / a real backend |
+| Code home | GitHub repo | ✅ Live |
+| Building | Claude Code on the web (Max plan) | Ready to connect |
+| Hosting | GitHub Pages (HTTPS) | ✅ Live |
+| Course data | JSON files per course (self-mapped) | Tool ready |
+| Shot data (POC) | Airtable | Phase 3 |
+| Shot data (scale) | AWS (DynamoDB / S3) | Phase 3 |
 
-You do NOT need a paid course-data API. Because it's one course you know, we map
-White Horse ourselves, once (see Gate 2).
+## Data strategy
 
----
+Three free layers:
+1. **Published course materials** — scorecards and hole maps from course websites
+2. **Satellite imagery** — GPS coordinates captured via the mapper tool
+3. **Local player knowledge** — ground truth from players who know the course
 
-## The one gate that can kill the project: GPS
-
-Uses **`gps-spike.html`**.
-
-**Desktop check (today, no glasses):**
-1. Ask Claude Code: "serve gps-spike.html over localhost." Open it in Chrome.
-2. Click START, allow location, watch the Verdict line.
-3. Click "Copy log" and paste it into the planning chat.
-
-**On-glasses check (needs hardware, done outdoors):**
-1. Deploy the app to its GitHub Pages URL and open it on the glasses.
-2. Stand outside with clear sky, click START, walk a little.
-3. Read the verdict; copy the log.
-
-**Pass criteria:**
-- PASS — updates keep coming AND accuracy stays at/under ~5 m (≈5.5 yd)
-- MARGINAL — updates come but accuracy is 5–15 m (works; expect rough yardages)
-- FAIL — no geolocation, no updates, or accuracy over 15 m
-
-**Deliverable:** `gps-results.md` — desktop log + on-glasses log, verdict on top.
+Friends map their home courses using the mapper + friend guide. Each course = one
+JSON file. No API costs.
 
 ---
 
-## Gate 2 (now just a build task): map White Horse
+## Remaining before build
 
-No availability risk anymore — we own the data. Uses **`course-mapper.html`**.
+- [ ] **Map White Horse Golf Club** — open course-mapper.html, use scorecard as
+  reference, place pins for all 18 holes, export JSON
+  → Deliverable: `white-horse-golf-club-course.json`
 
-1. Open `course-mapper.html` in your browser (desktop, big screen).
-2. It shows a satellite view of White Horse. For each of the 18 holes, click to drop
-   pins for: the tee, the green front / center / back, and any hazards.
-   Tracing from satellite imagery is more precise than walking with phone GPS.
-3. Drag any pin to fine-tune it.
-4. Click "Export JSON" — that file (`white-horse-course.json`) is your course data.
-   Hand it to Claude Code to drop into the app.
-
-**Deliverable:** `white-horse-course.json` — all 18 holes mapped.
-
-> Tip: Export early and often. The tool keeps data only while the page is open, so
-> export to save your progress; re-import to resume.
+- [ ] **Display constraints fact sheet** — pull from Meta Web Apps docs: resolution,
+  font minimums, refresh, overlay persistence, permissions, gesture input
+  → Deliverable: `display-constraints.md`
 
 ---
 
-## Supporting checks (after the GPS gate passes)
+## Build plan (once course data is ready)
 
-- **Display constraints fact sheet** — pull from Meta's Web Apps docs: resolution,
-  font minimums, refresh, overlay persistence, location permissions model.
-  Deliverable: `display-constraints.md`.
-- **Input model** — how the web app receives input on the glasses; whether Neural
-  Band gestures are exposed to web apps. Note it in the same file.
+**Phase 1 — Core rangefinder (the POC)**
+- Load course JSON + live GPS
+- Calculate distances (Haversine) to green front/center/back, hazards, doglegs, layups
+- Display as HUD: one large yardage number, secondary callouts
+- Auto-detect current hole from GPS proximity to tee boxes
+- Auto-advance when player moves past the green
+- Test on phone walking the course → test on glasses
 
----
+**Phase 2 — Polish and partner readiness**
+- Refine HUD design for Meta display constraints (600x600, sunlight, font sizes)
+- Add course selection screen (for multi-course support)
+- Neural Band gesture integration (manual hole advance, shot mark)
+- Field test at White Horse: full 18 holes on the glasses
+- Share via password-protected URL with testers
 
-## Who does what
-
-| Task | Claude Code (web) | Hardware (you, wearing glasses) | You (by hand) |
-|---|---|---|---|
-| Create the GitHub repo + Pages hosting | helps set up | | ✅ click-through |
-| Build/serve the GPS spike | ✅ | | |
-| Desktop GPS test | | | ✅ |
-| On-glasses GPS test | | ✅ | ✅ |
-| Map the course (course-mapper) | provides the tool | | ✅ click pins |
-| Read Meta docs, write fact sheet | ✅ | | |
-| Accept Meta developer terms | | | ✅ |
-| Go/no-go decision | | | ✅ (with planning chat) |
-
----
-
-## Deliverables checklist
-
-- [ ] GitHub repo created, GitHub Pages turned on (HTTPS URL live)
-- [ ] `gps-spike.html` deployed to the Pages URL
-- [ ] `gps-results.md` — desktop + on-glasses verdicts
-- [ ] `white-horse-course.json` — all 18 holes mapped
-- [ ] `display-constraints.md` — limits + input/permissions
-- [ ] `go-no-go.md` — proceed / redesign / wait, with reasons
+**Phase 3 — Shot tracking and scaling**
+- Tap-to-mark ball position after each shot
+- Calculate carry distance from previous position
+- Store shot data in Airtable (POC) / AWS (at scale)
+- Club tagging (optional per-shot club selection)
+- Club distance analytics (average carry per club over time)
+- Model: similar to Arccos — builds personal club profile from real data
+- Multi-user backend when scaling beyond personal use
 
 ---
 
-## First things to say to Claude Code on the web
+## Scaling plan
 
-1. "Create a new GitHub repo for a Meta Ray-Ban Display web app, add the
-   gps-spike.html and course-mapper.html files I have, and turn on GitHub Pages so I
-   get an HTTPS URL."
-2. "Give me the GitHub Pages URL for gps-spike.html so I can open it on the glasses."
-3. (After mapping) "Add white-horse-course.json to the repo — this is the course data
-   the app will read."
+- Friends map courses → JSON files → bundled into app
+- App gets a course-selection screen
+- Each new course = one JSON file, zero cost
+- Meta partner publishing opens later in 2026
+- Monetization model TBD by Meta
+- AWS backend only when adding user accounts + shot history sync
 
-Paste any errors or anything confusing into the planning chat and we'll work through it.
+---
+
+## Key URLs
+
+| Resource | URL |
+|---|---|
+| GPS spike (live) | harriskevint-hue.github.io/plans2putts/gps-spike.html |
+| Course mapper (live) | harriskevint-hue.github.io/plans2putts/course-mapper.html |
+| GitHub repo | github.com/harriskevint-hue/plans2putts |
+| Meta Developer Center | wearables.developer.meta.com |
+| Meta Web Apps docs | wearables.developer.meta.com/docs/develop/webapps |
+| Starter kit | github.com/facebookincubator/meta-wearables-webapp |
