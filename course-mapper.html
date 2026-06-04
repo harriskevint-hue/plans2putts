@@ -40,6 +40,8 @@
   }
   button:active { transform: scale(0.98); }
   button.primary { background: var(--center); color: #06210f; border-color: var(--center); }
+  button.copy { background: #2563eb; color: #fff; border-color: #2563eb; }
+  button.danger { background: transparent; color: #f87171; border-color: #f87171; font-size: 0.75rem; }
   .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .tool {
     display: flex; align-items: center; gap: 7px; justify-content: flex-start;
@@ -64,6 +66,9 @@
   .progress { font-size: 0.8rem; color: var(--dim); } .progress b { color: var(--center); }
   .checkbox { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--dim); }
   .hint { font-size: 0.74rem; color: var(--dim); line-height: 1.5; }
+  .save-status { font-size: 0.72rem; padding: 8px 10px; border-radius: 8px; text-align: center; }
+  .save-status.ok { background: #0a1f0a; color: var(--center); border: 1px solid #1a3a1a; }
+  .save-status.warn { background: #1f1a0a; color: var(--dogleg); border: 1px solid #3a351a; }
   .pin { border: 2px solid rgba(0,0,0,0.55); border-radius: 50%; width: 16px; height: 16px; box-shadow: 0 0 0 1px rgba(255,255,255,0.5); }
   .pin-label { position: absolute; left: 18px; top: -2px; white-space: nowrap; font: 600 11px ui-sans-serif, sans-serif; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.9); pointer-events: none; }
 </style>
@@ -72,10 +77,13 @@
   <div id="map"></div>
   <aside id="panel">
     <h1>Course Mapper<small>Plans2Putts</small></h1>
+
+    <div id="saveStatus" class="save-status ok">Auto-save: ready</div>
+
     <div class="card">
       <div class="label">Course name</div>
       <input type="text" id="courseName" placeholder="e.g. White Horse Golf Club">
-      <div class="hint" style="margin-top:6px;">Pan and zoom the map to find your course. Zoom in close for precise pin placement.</div>
+      <div class="hint" style="margin-top:6px;">Pan and zoom the map to find your course.</div>
     </div>
     <div class="card">
       <div class="label">Hole</div>
@@ -100,8 +108,8 @@
         <div class="tool" data-tool="dogleg"><span class="dot"></span>Dogleg</div>
         <div class="tool" data-tool="layup"><span class="dot"></span>Layup</div>
       </div>
-      <input type="text" id="itemLabel" placeholder="Label (e.g. fairway bunker, layup short of water)" style="margin-top:8px;">
-      <div class="hint" style="margin-top:8px;">Drag any pin to fine-tune. Tee/green/dogleg replace on re-click. Hazards and layups add new pins each click.</div>
+      <input type="text" id="itemLabel" placeholder="Label (e.g. fairway bunker)" style="margin-top:8px;">
+      <div class="hint" style="margin-top:8px;">Drag any pin to fine-tune. Tee/green/dogleg replace on re-click. Hazards and layups add new pins.</div>
     </div>
     <div class="card">
       <div class="label">Points on this hole</div>
@@ -109,29 +117,85 @@
     </div>
     <label class="checkbox"><input type="checkbox" id="showAll"> Show all holes (faint)</label>
     <div class="card">
-      <div class="label">Save your work</div>
+      <div class="label">Save &amp; share</div>
       <div class="row">
         <button class="primary" id="exportBtn">Export JSON</button>
+        <button class="copy" id="copyBtn">Copy to clipboard</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
         <button id="importBtn">Import JSON</button>
+        <button id="pasteBtn">Paste JSON</button>
       </div>
       <input type="file" id="importFile" accept="application/json" style="display:none;">
-      <div class="hint" style="margin-top:8px;">Export saves all 18 holes. Import resumes from a saved file. Export often — data is lost if you close the page.</div>
+      <div class="hint" style="margin-top:8px;">Your work auto-saves in this browser. Copy to clipboard works on any device — paste it into a chat, note, or email.</div>
+    </div>
+    <div class="card">
+      <button class="danger" id="clearBtn">Clear all data and start over</button>
     </div>
   </aside>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function () {
   "use strict";
+  var STORAGE_KEY = "plans2putts_course_data";
   var COLORS = { tee:"#3b82f6", front:"#86efac", center:"#22c55e", back:"#15803d", hazard:"#f97316", dogleg:"#facc15", layup:"#a78bfa" };
-  var holes = [];
-  for (var i = 1; i <= 18; i++) {
-    holes.push({ hole:i, par:null, tee:null, green:{front:null,center:null,back:null}, hazards:[], dogleg:null, layups:[] });
+
+  function makeDefaultHoles() {
+    var h = [];
+    for (var i = 1; i <= 18; i++) h.push({ hole:i, par:null, tee:null, green:{front:null,center:null,back:null}, hazards:[], dogleg:null, layups:[] });
+    return h;
   }
+
+  var holes = makeDefaultHoles();
+  var courseName = "";
   var current = 0, tool = "tee";
+
+  // --- Auto-save ---
+  function saveState() {
+    try {
+      var data = { course: el.courseName.value.trim(), holes: holes, savedAt: new Date().toISOString() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      var t = new Date();
+      el.saveStatus.textContent = "Auto-saved at " + t.toLocaleTimeString();
+      el.saveStatus.className = "save-status ok";
+    } catch(e) {
+      el.saveStatus.textContent = "Auto-save failed — use Copy to clipboard";
+      el.saveStatus.className = "save-status warn";
+    }
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (data.holes && data.holes.length) {
+        for (var k = 0; k < 18; k++) {
+          if (data.holes[k]) {
+            var defaults = { hole:k+1, par:null, tee:null, green:{front:null,center:null,back:null}, hazards:[], dogleg:null, layups:[] };
+            holes[k] = Object.assign(defaults, data.holes[k]);
+            if (!holes[k].green) holes[k].green = {front:null,center:null,back:null};
+            if (!holes[k].hazards) holes[k].hazards = [];
+            if (!holes[k].layups) holes[k].layups = [];
+          }
+        }
+        if (data.course) el.courseName.value = data.course;
+        var count = holes.filter(function(h){ return h.green.center; }).length;
+        el.saveStatus.textContent = "Restored " + count + " mapped holes from auto-save";
+        el.saveStatus.className = "save-status ok";
+        return true;
+      }
+    } catch(e) {}
+    return false;
+  }
+
+  // --- Map ---
   var map = L.map("map", { zoomControl:true }).setView([47.769589, -122.529283], 16);
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    { maxZoom:21, maxNativeZoom:19, attribution:"Imagery &copy; Esri, Maxar, Earthstar Geographics" }).addTo(map);
+    { maxZoom:21, maxNativeZoom:19, attribution:"Imagery &copy; Esri, Maxar" }).addTo(map);
   var layer = L.layerGroup().addTo(map);
+
+  // --- DOM ---
   var el = {
     courseName: document.getElementById("courseName"),
     holeSelect: document.getElementById("holeSelect"),
@@ -143,14 +207,24 @@
     itemLabel: document.getElementById("itemLabel"),
     showAll: document.getElementById("showAll"),
     exportBtn: document.getElementById("exportBtn"),
+    copyBtn: document.getElementById("copyBtn"),
     importBtn: document.getElementById("importBtn"),
-    importFile: document.getElementById("importFile")
+    pasteBtn: document.getElementById("pasteBtn"),
+    importFile: document.getElementById("importFile"),
+    clearBtn: document.getElementById("clearBtn"),
+    saveStatus: document.getElementById("saveStatus")
   };
   for (var h = 1; h <= 18; h++) { var o = document.createElement("option"); o.value = h-1; o.textContent = "Hole "+h; el.holeSelect.appendChild(o); }
+
+  el.courseName.addEventListener("input", saveState);
+
+  // --- Icons ---
   function makeIcon(color, label, faint) {
     var op = faint ? 0.4 : 1;
     return L.divIcon({ className:"", html:'<div class="pin" style="background:'+color+';opacity:'+op+'"></div>'+(label?'<div class="pin-label" style="opacity:'+op+'">'+label+"</div>":""), iconSize:[16,16], iconAnchor:[8,8] });
   }
+
+  // --- Points ---
   function setPoint(hole, kind, latlng, idx, label) {
     var pt = { lat:+latlng.lat.toFixed(6), lng:+latlng.lng.toFixed(6) };
     if (kind === "tee") hole.tee = pt;
@@ -163,17 +237,20 @@
       else hole.layups.push({ label: label || ("layup "+(hole.layups.length+1)), lat:pt.lat, lng:pt.lng });
     } else { hole.green[kind] = pt; }
   }
+
   map.on("click", function (e) {
     var hole = holes[current], lbl = el.itemLabel.value.trim();
     if (tool === "hazard") setPoint(hole, "hazard", e.latlng, undefined, lbl);
     else if (tool === "layup") setPoint(hole, "layup", e.latlng, undefined, lbl);
     else setPoint(hole, tool, e.latlng);
     el.itemLabel.value = "";
-    render();
+    render(); saveState();
   });
+
+  // --- Markers ---
   function addMarker(kind, pt, label, color, draggable, onDrag, faint) {
     var m = L.marker([pt.lat, pt.lng], { icon:makeIcon(color, label, faint), draggable:!!draggable }).addTo(layer);
-    if (draggable && onDrag) m.on("dragend", function(ev){ onDrag(ev.target.getLatLng()); });
+    if (draggable && onDrag) m.on("dragend", function(ev){ onDrag(ev.target.getLatLng()); saveState(); });
     return m;
   }
   function renderHoleMarkers(hole, draggable, faint) {
@@ -189,16 +266,19 @@
       addMarker("layup", lp, draggable?lp.label:"", COLORS.layup, draggable, function(ll){ setPoint(hole,"layup",ll,idx); render(); }, faint);
     });
   }
+
   function render() {
     layer.clearLayers();
     if (el.showAll.checked) { holes.forEach(function(h,idx){ if(idx!==current) renderHoleMarkers(h,false,true); }); }
     renderHoleMarkers(holes[current], true, false);
     renderList(); renderProgress();
   }
+
+  // --- List ---
   function ptRow(name, color, pt, onDelete) {
     var div = document.createElement("div"); div.className = "pt";
     div.innerHTML = '<span class="dot" style="background:'+color+'"></span><span class="nm">'+name+'</span><span class="co">'+(pt?pt.lat.toFixed(5)+", "+pt.lng.toFixed(5):"—")+"</span>";
-    if (pt && onDelete) { var b = document.createElement("button"); b.textContent = "\u2715"; b.onclick = onDelete; div.appendChild(b); }
+    if (pt && onDelete) { var b = document.createElement("button"); b.textContent = "\u2715"; b.onclick = function(){ onDelete(); saveState(); }; div.appendChild(b); }
     return div;
   }
   function renderList() {
@@ -209,7 +289,7 @@
     el.pointList.appendChild(ptRow("Green back", COLORS.back, hole.green.back, function(){ hole.green.back=null; render(); }));
     el.pointList.appendChild(ptRow("Dogleg", COLORS.dogleg, hole.dogleg, function(){ hole.dogleg=null; render(); }));
     if (!hole.hazards.length && !hole.layups.length) {
-      var e2 = document.createElement("div"); e2.className = "empty"; e2.textContent = "No hazards or layups placed."; el.pointList.appendChild(e2);
+      var e2 = document.createElement("div"); e2.className = "empty"; e2.textContent = "No hazards or layups."; el.pointList.appendChild(e2);
     }
     hole.hazards.forEach(function(hz, idx) {
       el.pointList.appendChild(ptRow(hz.label, COLORS.hazard, hz, function(){ hole.hazards.splice(idx,1); render(); }));
@@ -219,6 +299,8 @@
     });
   }
   function renderProgress() { el.doneCount.textContent = holes.filter(function(h){ return h.green.center; }).length; }
+
+  // --- Navigation ---
   function goHole(idx) {
     current = Math.max(0, Math.min(17, idx)); el.holeSelect.value = current;
     el.par.value = holes[current].par == null ? "" : holes[current].par; render();
@@ -226,45 +308,101 @@
   el.holeSelect.addEventListener("change", function(){ goHole(+this.value); });
   el.prevHole.addEventListener("click", function(){ goHole(current-1); });
   el.nextHole.addEventListener("click", function(){ goHole(current+1); });
-  el.par.addEventListener("change", function(){ var v = parseInt(this.value,10); holes[current].par = isNaN(v)?null:v; });
+  el.par.addEventListener("change", function(){ var v = parseInt(this.value,10); holes[current].par = isNaN(v)?null:v; saveState(); });
+
+  // --- Tools ---
   document.querySelectorAll(".tool").forEach(function(t) {
     t.addEventListener("click", function(){ document.querySelectorAll(".tool").forEach(function(x){ x.classList.remove("active"); }); t.classList.add("active"); tool = t.getAttribute("data-tool"); });
   });
   el.showAll.addEventListener("change", render);
+
+  // --- Export ---
+  function buildJSON() {
+    var name = el.courseName.value.trim() || "Unnamed Course";
+    return JSON.stringify({ course:name, generated:new Date().toISOString(), holes:holes }, null, 2);
+  }
   function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"") || "course"; }
+
   el.exportBtn.addEventListener("click", function() {
     var name = el.courseName.value.trim() || "Unnamed Course";
-    var data = { course:name, generated:new Date().toISOString(), holes:holes };
-    var blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+    var blob = new Blob([buildJSON()], {type:"application/json"});
     var a = document.createElement("a"); a.href = URL.createObjectURL(blob);
     a.download = slugify(name)+"-course.json";
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   });
+
+  // --- Copy to clipboard ---
+  el.copyBtn.addEventListener("click", function() {
+    var json = buildJSON();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(json).then(function() {
+        el.saveStatus.textContent = "Copied to clipboard! Paste it anywhere.";
+        el.saveStatus.className = "save-status ok";
+      }, function() { fallbackCopy(json); });
+    } else { fallbackCopy(json); }
+  });
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea"); ta.value = text;
+    ta.style.cssText = "position:fixed;left:-9999px;"; document.body.appendChild(ta);
+    ta.select(); ta.setSelectionRange(0, ta.value.length);
+    try { document.execCommand("copy"); el.saveStatus.textContent = "Copied to clipboard!"; el.saveStatus.className = "save-status ok"; }
+    catch(e) {
+      prompt("Copy this text manually:", text);
+      el.saveStatus.textContent = "Auto-copy failed — text shown for manual copy"; el.saveStatus.className = "save-status warn";
+    }
+    document.body.removeChild(ta);
+  }
+
+  // --- Import ---
   el.importBtn.addEventListener("click", function(){ el.importFile.click(); });
   el.importFile.addEventListener("change", function(ev) {
     var file = ev.target.files[0]; if (!file) return;
     var reader = new FileReader();
-    reader.onload = function() {
-      try {
-        var data = JSON.parse(reader.result);
-        if (data.course) el.courseName.value = data.course;
-        if (data.holes && data.holes.length) {
-          for (var k = 0; k < 18; k++) {
-            if (data.holes[k]) {
-              var defaults = { hole:k+1, par:null, tee:null, green:{front:null,center:null,back:null}, hazards:[], dogleg:null, layups:[] };
-              holes[k] = Object.assign(defaults, data.holes[k]);
-              if (!holes[k].green) holes[k].green = {front:null,center:null,back:null};
-              if (!holes[k].hazards) holes[k].hazards = [];
-              if (!holes[k].layups) holes[k].layups = [];
-            }
-          }
-          goHole(0); alert("Imported: "+data.course);
-        } else { alert("That file doesn't look like course data."); }
-      } catch(e) { alert("Could not read that file: "+e.message); }
-    };
+    reader.onload = function() { loadFromJSON(reader.result); };
     reader.readAsText(file); ev.target.value = "";
   });
+
+  // --- Paste JSON ---
+  el.pasteBtn.addEventListener("click", function() {
+    var text = prompt("Paste your course JSON here:");
+    if (text && text.trim()) loadFromJSON(text.trim());
+  });
+
+  function loadFromJSON(text) {
+    try {
+      var data = JSON.parse(text);
+      if (data.holes && data.holes.length) {
+        for (var k = 0; k < 18; k++) {
+          if (data.holes[k]) {
+            var defaults = { hole:k+1, par:null, tee:null, green:{front:null,center:null,back:null}, hazards:[], dogleg:null, layups:[] };
+            holes[k] = Object.assign(defaults, data.holes[k]);
+            if (!holes[k].green) holes[k].green = {front:null,center:null,back:null};
+            if (!holes[k].hazards) holes[k].hazards = [];
+            if (!holes[k].layups) holes[k].layups = [];
+          }
+        }
+        if (data.course) el.courseName.value = data.course;
+        goHole(0); saveState();
+        alert("Loaded: " + (data.course || "course data"));
+      } else { alert("That doesn't look like course data."); }
+    } catch(e) { alert("Could not read that data: " + e.message); }
+  }
+
+  // --- Clear ---
+  el.clearBtn.addEventListener("click", function() {
+    if (confirm("Delete ALL mapped data and start over? This cannot be undone.")) {
+      holes = makeDefaultHoles(); el.courseName.value = "";
+      try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
+      goHole(0);
+      el.saveStatus.textContent = "All data cleared"; el.saveStatus.className = "save-status warn";
+    }
+  });
+
+  // --- Startup: auto-load ---
+  var restored = loadState();
   goHole(0);
+  if (!restored) { el.saveStatus.textContent = "Auto-save: ready — your work saves automatically"; el.saveStatus.className = "save-status ok"; }
 })();
 </script>
 </body>
