@@ -8,15 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0a;
-    --primary: #ffffff;
-    --green: #4ade80;
-    --green-dim: #22c55e;
-    --amber: #fbbf24;
-    --red: #f87171;
-    --dim: #6b7280;
-    --dim2: #374151;
-    --panel: #111111;
+    --bg: #0a0a0a; --primary: #ffffff; --green: #4ade80; --green-dim: #22c55e;
+    --amber: #fbbf24; --red: #f87171; --dim: #6b7280; --dim2: #374151; --panel: #111111;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; background: var(--bg); color: var(--primary); overflow: hidden; }
@@ -25,15 +18,8 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     height: 100vh; padding: 16px;
   }
-
-  /* --- HUD Container --- */
   .hud { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-
-  /* --- Hole indicator --- */
-  .hole-bar {
-    display: flex; align-items: center; gap: 16px; width: 100%;
-    justify-content: center; padding: 8px 0;
-  }
+  .hole-bar { display: flex; align-items: center; gap: 16px; width: 100%; justify-content: center; padding: 8px 0; }
   .hole-bar button {
     font-family: 'DM Mono', monospace; font-size: 1.2rem; font-weight: 500;
     background: none; border: 2px solid var(--dim2); color: var(--dim);
@@ -44,21 +30,16 @@
   .hole-info { text-align: center; }
   .hole-num { font-family: 'Anton', sans-serif; font-size: 1.6rem; letter-spacing: 0.05em; color: var(--green); }
   .hole-par { font-size: 0.75rem; color: var(--dim); letter-spacing: 0.15em; text-transform: uppercase; }
-
-  /* --- Primary yardage --- */
-  .yardage-wrap { text-align: center; padding: 8px 0; }
+  .yardage-wrap { text-align: center; padding: 8px 0; cursor: pointer; }
   .yardage-label { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); margin-bottom: -4px; }
   .yardage {
-    font-family: 'Anton', sans-serif;
-    font-size: min(28vw, 160px);
-    line-height: 1;
-    color: var(--primary);
-    letter-spacing: -0.02em;
+    font-family: 'Anton', sans-serif; font-size: min(28vw, 160px); line-height: 1;
+    color: var(--primary); letter-spacing: -0.02em;
     text-shadow: 0 0 40px rgba(74, 222, 128, 0.15);
   }
   .yardage-unit { font-size: 0.7rem; letter-spacing: 0.15em; color: var(--dim); text-transform: uppercase; }
-
-  /* --- Front / Back --- */
+  .tap-hint { font-size: 0.6rem; color: var(--dim2); letter-spacing: 0.1em; margin-top: 2px; }
+  .tap-hint.speaking { color: var(--green); }
   .fb-row {
     display: flex; gap: 32px; justify-content: center;
     padding: 6px 0; border-top: 1px solid var(--dim2); border-bottom: 1px solid var(--dim2);
@@ -67,68 +48,47 @@
   .fb-item { text-align: center; }
   .fb-label { font-size: 0.6rem; letter-spacing: 0.15em; color: var(--dim); text-transform: uppercase; }
   .fb-val { font-family: 'Anton', sans-serif; font-size: 2rem; color: var(--green); }
-
-  /* --- Hazards --- */
   .hazards { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 4px; padding: 6px 0; }
-  .hz-row {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 0.8rem; color: var(--amber); padding: 4px 12px;
-  }
+  .hz-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--amber); padding: 4px 12px; }
   .hz-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); flex: none; }
   .hz-name { flex: 1; color: var(--dim); font-size: 0.7rem; }
   .hz-dist { font-family: 'Anton', sans-serif; font-size: 1.1rem; }
-
-  /* --- Dogleg / Layup --- */
   .extra-row { display: flex; gap: 24px; justify-content: center; padding: 2px 0; }
   .extra-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; }
   .extra-item .dot-dg { width: 8px; height: 8px; border-radius: 50%; background: #facc15; }
   .extra-item .dot-lu { width: 8px; height: 8px; border-radius: 50%; background: #a78bfa; }
   .extra-dist { font-family: 'Anton', sans-serif; font-size: 1rem; }
   .extra-label { color: var(--dim); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; }
-
-  /* --- Hole dots --- */
   .hole-dots { display: flex; gap: 5px; justify-content: center; padding: 8px 0; }
   .hdot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim2); }
-  .hdot.done { background: var(--dim); }
-  .hdot.active { background: var(--green); box-shadow: 0 0 8px rgba(74, 222, 128, 0.5); }
-
-  /* --- GPS status --- */
-  .gps-status { font-size: 0.6rem; color: var(--dim); letter-spacing: 0.1em; text-align: center; padding: 4px; }
-  .gps-status.good { color: var(--green-dim); }
-  .gps-status.warn { color: var(--amber); }
-  .gps-status.bad { color: var(--red); }
-
-  /* --- Loading / error states --- */
-  .state-msg {
-    text-align: center; padding: 40px 20px;
+  .hdot.done { background: var(--dim); } .hdot.active { background: var(--green); box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+  .bottom-bar { display: flex; align-items: center; justify-content: center; gap: 16px; width: 100%; }
+  .gps-status { font-size: 0.6rem; color: var(--dim); letter-spacing: 0.1em; }
+  .gps-status.good { color: var(--green-dim); } .gps-status.warn { color: var(--amber); } .gps-status.bad { color: var(--red); }
+  .mute-btn {
+    font-family: inherit; font-size: 1.2rem; background: none; border: 1px solid var(--dim2);
+    color: var(--dim); width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
   }
+  .mute-btn.on { border-color: var(--green-dim); color: var(--green); }
+  .state-msg { text-align: center; padding: 40px 20px; }
   .state-msg h2 { font-family: 'Anton', sans-serif; font-size: 2rem; margin-bottom: 12px; }
   .state-msg p { font-size: 0.85rem; color: var(--dim); line-height: 1.6; max-width: 300px; margin: 0 auto; }
-  .spinner {
-    width: 40px; height: 40px; border: 3px solid var(--dim2); border-top-color: var(--green);
-    border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;
-  }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--dim2); border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .hidden { display: none !important; }
 </style>
 </head>
 <body>
-
-  <!-- Loading state -->
   <div id="stateLoading" class="state-msg">
     <div class="spinner"></div>
     <h2>Acquiring GPS</h2>
     <p>Stand outside with a clear sky view. Allow location when prompted.</p>
   </div>
-
-  <!-- Error state -->
   <div id="stateError" class="state-msg hidden">
     <h2 id="errTitle">GPS Unavailable</h2>
     <p id="errMsg">Could not access location.</p>
   </div>
-
-  <!-- HUD -->
   <div id="hud" class="hud hidden">
     <div class="hole-bar">
       <button id="prevBtn">&#8249;</button>
@@ -138,45 +98,36 @@
       </div>
       <button id="nextBtn">&#8250;</button>
     </div>
-
-    <div class="yardage-wrap">
+    <div class="yardage-wrap" id="yardageTap">
       <div class="yardage-label">to center</div>
       <div class="yardage" id="yardCenter">---</div>
       <div class="yardage-unit">yards</div>
+      <div class="tap-hint" id="tapHint">tap for voice</div>
     </div>
-
     <div class="fb-row">
-      <div class="fb-item">
-        <div class="fb-label">Front</div>
-        <div class="fb-val" id="yardFront">--</div>
-      </div>
-      <div class="fb-item">
-        <div class="fb-label">Back</div>
-        <div class="fb-val" id="yardBack">--</div>
-      </div>
+      <div class="fb-item"><div class="fb-label">Front</div><div class="fb-val" id="yardFront">--</div></div>
+      <div class="fb-item"><div class="fb-label">Back</div><div class="fb-val" id="yardBack">--</div></div>
     </div>
-
     <div class="extra-row" id="extraRow"></div>
-
     <div class="hazards" id="hazardList"></div>
-
     <div class="hole-dots" id="holeDots"></div>
-
-    <div class="gps-status" id="gpsStatus">GPS: acquiring...</div>
+    <div class="bottom-bar">
+      <div class="gps-status" id="gpsStatus">GPS: acquiring...</div>
+      <button class="mute-btn on" id="muteBtn" title="Toggle voice">&#x1f50a;</button>
+    </div>
   </div>
-
 <script>
 (function () {
   "use strict";
 
-  // ===== COURSE DATA =====
   var COURSE = {"course":"White Horse Golf Club","holes":[{"hole":1,"par":4,"tee":{"lat":47.768034,"lng":-122.532291},"green":{"front":{"lat":47.76899,"lng":-122.535705},"center":{"lat":47.769026,"lng":-122.535812},"back":{"lat":47.769074,"lng":-122.535946}},"hazards":[{"label":"hazard 1","lat":47.768168,"lng":-122.532596},{"label":"hazard 2","lat":47.768413,"lng":-122.533498},{"label":"hazard 3","lat":47.768582,"lng":-122.533916},{"label":"hazard 4","lat":47.768845,"lng":-122.534643},{"label":"hazard 5","lat":47.768935,"lng":-122.535987}],"dogleg":null,"layups":[]},{"hole":2,"par":4,"tee":{"lat":47.76944,"lng":-122.536786},"green":{"front":{"lat":47.772029,"lng":-122.536842},"center":{"lat":47.772102,"lng":-122.536789},"back":{"lat":47.772176,"lng":-122.536703}},"hazards":[{"label":"hazard 1","lat":47.771186,"lng":-122.536743},{"label":"hazard 2","lat":47.771902,"lng":-122.5367},{"label":"hazard 3","lat":47.772286,"lng":-122.536786}],"dogleg":null,"layups":[]},{"hole":3,"par":5,"tee":{"lat":47.771511,"lng":-122.539111},"green":{"front":{"lat":47.768334,"lng":-122.538969},"center":{"lat":47.768207,"lng":-122.53894},"back":{"lat":47.768096,"lng":-122.538924}},"hazards":[{"label":"hazard 1","lat":47.769934,"lng":-122.539428},{"label":"hazard 2","lat":47.76911,"lng":-122.539685},{"label":"hazard 3","lat":47.768598,"lng":-122.539079},{"label":"hazard 4","lat":47.768097,"lng":-122.538744}],"dogleg":null,"layups":[]},{"hole":4,"par":3,"tee":{"lat":47.767731,"lng":-122.53939},"green":{"front":{"lat":47.766848,"lng":-122.537908},"center":{"lat":47.766712,"lng":-122.537806},"back":{"lat":47.76655,"lng":-122.53771}},"hazards":[{"label":"hazard 1","lat":47.766766,"lng":-122.53806},{"label":"hazard 2","lat":47.766622,"lng":-122.538038}],"dogleg":null,"layups":[]},{"hole":5,"par":4,"tee":{"lat":47.766717,"lng":-122.535721},"green":{"front":{"lat":47.764358,"lng":-122.534359},"center":{"lat":47.764244,"lng":-122.534224},"back":{"lat":47.764103,"lng":-122.534171}},"hazards":[{"label":"hazard 1","lat":47.76619,"lng":-122.535324},{"label":"hazard 2","lat":47.764971,"lng":-122.534455},{"label":"hazard 3","lat":47.764325,"lng":-122.534058}],"dogleg":null,"layups":[]},{"hole":6,"par":3,"tee":{"lat":47.763398,"lng":-122.534493},"green":{"front":{"lat":47.762775,"lng":-122.533524},"center":{"lat":47.762663,"lng":-122.533487},"back":{"lat":47.76255,"lng":-122.533377}},"hazards":[{"label":"hazard 1","lat":47.762946,"lng":-122.534195},{"label":"hazard 2","lat":47.762683,"lng":-122.533927},{"label":"hazard 3","lat":47.762487,"lng":-122.53361},{"label":"hazard 4","lat":47.762683,"lng":-122.533299}],"dogleg":null,"layups":[]},{"hole":7,"par":4,"tee":{"lat":47.75998,"lng":-122.531781},"green":{"front":{"lat":47.75801,"lng":-122.532341},"center":{"lat":47.757918,"lng":-122.532382},"back":{"lat":47.757831,"lng":-122.532427}},"hazards":[{"label":"hazard 1","lat":47.75889,"lng":-122.5325},{"label":"hazard 2","lat":47.758008,"lng":-122.532513}],"dogleg":null,"layups":[]},{"hole":8,"par":5,"tee":{"lat":47.759135,"lng":-122.534884},"green":{"front":{"lat":47.761898,"lng":-122.533986},"center":{"lat":47.761956,"lng":-122.53387},"back":{"lat":47.762084,"lng":-122.533838}},"hazards":[{"label":"hazard 1","lat":47.759595,"lng":-122.534316},{"label":"hazard 2","lat":47.761565,"lng":-122.534479},{"label":"hazard 3","lat":47.761806,"lng":-122.533835},{"label":"hazard 4","lat":47.761841,"lng":-122.534063}],"dogleg":null,"layups":[]},{"hole":9,"par":4,"tee":{"lat":47.764556,"lng":-122.531671},"green":{"front":{"lat":47.767429,"lng":-122.532293},"center":{"lat":47.767527,"lng":-122.53232},"back":{"lat":47.767624,"lng":-122.532406}},"hazards":[{"label":"hazard 1","lat":47.766406,"lng":-122.532197},{"label":"hazard 2","lat":47.767736,"lng":-122.532358}],"dogleg":null,"layups":[]},{"hole":10,"par":4,"tee":{"lat":47.768054,"lng":-122.530727},"green":{"front":{"lat":47.766042,"lng":-122.529509},"center":{"lat":47.766078,"lng":-122.529155},"back":{"lat":47.76615,"lng":-122.528983}},"hazards":[{"label":"hazard 1","lat":47.766561,"lng":-122.530475},{"label":"hazard 2","lat":47.766416,"lng":-122.531193},{"label":"hazard 3","lat":47.766143,"lng":-122.529407}],"dogleg":{"lat":47.766532,"lng":-122.53078},"layups":[{"label":"layup 1","lat":47.766438,"lng":-122.530829}]},{"hole":11,"par":4,"tee":{"lat":47.76744,"lng":-122.528479},"green":{"front":{"lat":47.767403,"lng":-122.525657},"center":{"lat":47.767335,"lng":-122.525521},"back":{"lat":47.767238,"lng":-122.525446}},"hazards":[{"label":"hazard 1","lat":47.767303,"lng":-122.526113},{"label":"hazard 2","lat":47.767332,"lng":-122.525808},{"label":"hazard 3","lat":47.767617,"lng":-122.526231}],"dogleg":null,"layups":[]},{"hole":12,"par":4,"tee":{"lat":47.768749,"lng":-122.523125},"green":{"front":{"lat":47.770429,"lng":-122.523109},"center":{"lat":47.770548,"lng":-122.522981},"back":{"lat":47.770675,"lng":-122.522857}},"hazards":[{"label":"hazard 1","lat":47.769925,"lng":-122.522884}],"dogleg":null,"layups":[]},{"hole":13,"par":3,"tee":{"lat":47.771111,"lng":-122.523023},"green":{"front":{"lat":47.772159,"lng":-122.52238},"center":{"lat":47.772268,"lng":-122.522358},"back":{"lat":47.772366,"lng":-122.522294}},"hazards":[{"label":"hazard 1","lat":47.772188,"lng":-122.522192},{"label":"hazard 2","lat":47.772138,"lng":-122.522546},{"label":"hazard 3","lat":47.772433,"lng":-122.522466}],"dogleg":null,"layups":[]},{"hole":14,"par":5,"tee":{"lat":47.771464,"lng":-122.521768},"green":{"front":{"lat":47.768,"lng":-122.522466},"center":{"lat":47.767913,"lng":-122.522535},"back":{"lat":47.767856,"lng":-122.522621}},"hazards":[{"label":"hazard 1","lat":47.768767,"lng":-122.522026},{"label":"hazard 2","lat":47.768231,"lng":-122.522444},{"label":"hazard 3","lat":47.767928,"lng":-122.522305},{"label":"hazard 4","lat":47.767758,"lng":-122.522605}],"dogleg":null,"layups":[]},{"hole":15,"par":4,"tee":{"lat":47.767917,"lng":-122.525609},"green":{"front":{"lat":47.769125,"lng":-122.528222},"center":{"lat":47.769255,"lng":-122.528232},"back":{"lat":47.769429,"lng":-122.528262}},"hazards":[{"label":"hazard 1","lat":47.768481,"lng":-122.526854},{"label":"hazard 2","lat":47.769033,"lng":-122.527707},{"label":"hazard 3","lat":47.769157,"lng":-122.528007},{"label":"hazard 4","lat":47.769335,"lng":-122.528063},{"label":"hazard 5","lat":47.769469,"lng":-122.528262}],"dogleg":null,"layups":[]},{"hole":16,"par":5,"tee":{"lat":47.770686,"lng":-122.530764},"green":{"front":{"lat":47.772034,"lng":-122.535008},"center":{"lat":47.772059,"lng":-122.535147},"back":{"lat":47.772111,"lng":-122.535295}},"hazards":[{"label":"hazard 1","lat":47.770861,"lng":-122.531118},{"label":"hazard 2","lat":47.770963,"lng":-122.531601},{"label":"hazard 3","lat":47.771423,"lng":-122.531781},{"label":"hazard 4","lat":47.771461,"lng":-122.532138},{"label":"hazard 5","lat":47.771266,"lng":-122.532441},{"label":"hazard 6","lat":47.771855,"lng":-122.534409},{"label":"hazard 7","lat":47.771956,"lng":-122.534946},{"label":"hazard 8","lat":47.7722,"lng":-122.535203}],"dogleg":null,"layups":[]},{"hole":17,"par":3,"tee":{"lat":47.771648,"lng":-122.535968},"green":{"front":{"lat":47.770668,"lng":-122.536097},"center":{"lat":47.770527,"lng":-122.536059},"back":{"lat":47.770397,"lng":-122.535992}},"hazards":[{"label":"hazard 1","lat":47.770714,"lng":-122.535946},{"label":"hazard 2","lat":47.770581,"lng":-122.535893},{"label":"hazard 3","lat":47.770368,"lng":-122.536139}],"dogleg":null,"layups":[]},{"hole":18,"par":4,"tee":{"lat":47.769923,"lng":-122.535844},"green":{"front":{"lat":47.768746,"lng":-122.531746},"center":{"lat":47.768809,"lng":-122.531569},"back":{"lat":47.768894,"lng":-122.531269}},"hazards":[{"label":"hazard 1","lat":47.769465,"lng":-122.533532},{"label":"hazard 2","lat":47.769258,"lng":-122.532886},{"label":"hazard 3","lat":47.769017,"lng":-122.532304},{"label":"hazard 4","lat":47.768716,"lng":-122.533347},{"label":"hazard 5","lat":47.768723,"lng":-122.533208},{"label":"hazard 6","lat":47.76871,"lng":-122.533063},{"label":"hazard 7","lat":47.768703,"lng":-122.531419},{"label":"hazard 8","lat":47.768768,"lng":-122.531325}],"dogleg":null,"layups":[]}]};
 
   var holes = COURSE.holes;
   var currentHole = 0;
   var playerLat = null, playerLng = null, gpsAcc = null;
+  var voiceOn = true;
+  var lastSpokenHole = -1;
 
-  // ===== DOM =====
   var el = {
     loading: document.getElementById("stateLoading"),
     error: document.getElementById("stateError"),
@@ -193,8 +144,63 @@
     holeDots: document.getElementById("holeDots"),
     gpsStatus: document.getElementById("gpsStatus"),
     prevBtn: document.getElementById("prevBtn"),
-    nextBtn: document.getElementById("nextBtn")
+    nextBtn: document.getElementById("nextBtn"),
+    yardageTap: document.getElementById("yardageTap"),
+    tapHint: document.getElementById("tapHint"),
+    muteBtn: document.getElementById("muteBtn")
   };
+
+  // ===== VOICE =====
+  var hasSpeech = "speechSynthesis" in window;
+
+  function speak(text) {
+    if (!hasSpeech || !voiceOn) return;
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.95;
+    u.pitch = 1.0;
+    u.volume = 1.0;
+    u.onstart = function () { el.tapHint.textContent = "speaking..."; el.tapHint.className = "tap-hint speaking"; };
+    u.onend = function () { el.tapHint.textContent = "tap for voice"; el.tapHint.className = "tap-hint"; };
+    speechSynthesis.speak(u);
+  }
+
+  function speakHoleChange(hole) {
+    var dCenter = distTo(hole.green.center);
+    var yds = dCenter !== null ? metersToYards(dCenter) : null;
+    var msg = "Hole " + hole.hole + ". Par " + (hole.par || "unknown") + ".";
+    if (yds !== null) msg += " " + yds + " yards to center.";
+    speak(msg);
+  }
+
+  function speakFullUpdate() {
+    var hole = holes[currentHole];
+    var dCenter = distTo(hole.green.center);
+    var dFront = distTo(hole.green.front);
+    var dBack = distTo(hole.green.back);
+
+    var msg = "";
+    if (dCenter !== null) msg += metersToYards(dCenter) + " to center.";
+    if (dFront !== null && dBack !== null) msg += " Front " + metersToYards(dFront) + ", back " + metersToYards(dBack) + ".";
+
+    // Nearest hazard
+    var nearest = hole.hazards.map(function (hz) {
+      return { label: hz.label, dist: distTo(hz) };
+    }).filter(function (h) { return h.dist !== null; })
+      .sort(function (a, b) { return a.dist - b.dist; });
+
+    if (nearest.length > 0) {
+      msg += " Nearest hazard, " + metersToYards(nearest[0].dist) + " yards.";
+    }
+
+    // Dogleg
+    if (hole.dogleg) {
+      var dDog = distTo(hole.dogleg);
+      if (dDog !== null) msg += " Dogleg, " + metersToYards(dDog) + ".";
+    }
+
+    speak(msg);
+  }
 
   // ===== HAVERSINE =====
   function haversine(lat1, lng1, lat2, lng2) {
@@ -206,9 +212,7 @@
       Math.sin(dLng / 2) * Math.sin(dLng / 2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
-
   function metersToYards(m) { return Math.round(m * 1.09361); }
-
   function distTo(pt) {
     if (!pt || playerLat === null) return null;
     return haversine(playerLat, playerLng, pt.lat, pt.lng);
@@ -219,9 +223,13 @@
     if (playerLat === null) return;
     var nextIdx = currentHole + 1;
     if (nextIdx < 18) {
-      var distToNextTee = distTo(holes[nextIdx].tee);
-      if (distToNextTee !== null && distToNextTee < 40) {
+      var d = distTo(holes[nextIdx].tee);
+      if (d !== null && d < 40) {
         currentHole = nextIdx;
+        if (lastSpokenHole !== currentHole) {
+          lastSpokenHole = currentHole;
+          speakHoleChange(holes[currentHole]);
+        }
       }
     }
   }
@@ -238,46 +246,31 @@
 
   function update() {
     var hole = holes[currentHole];
-
-    // Hole info
     el.holeNum.textContent = "HOLE " + hole.hole;
-    el.holePar.textContent = "Par " + (hole.par || "—");
-
+    el.holePar.textContent = "Par " + (hole.par || "\u2014");
     if (playerLat === null) return;
 
-    // Green distances
     var dCenter = distTo(hole.green.center);
     var dFront = distTo(hole.green.front);
     var dBack = distTo(hole.green.back);
-
     el.yardCenter.textContent = dCenter !== null ? metersToYards(dCenter) : "---";
     el.yardFront.textContent = dFront !== null ? metersToYards(dFront) : "--";
     el.yardBack.textContent = dBack !== null ? metersToYards(dBack) : "--";
 
-    // Dogleg / Layup
     el.extraRow.innerHTML = "";
     if (hole.dogleg) {
       var dDog = distTo(hole.dogleg);
-      if (dDog !== null) {
-        el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-dg"></span><span class="extra-label">Dogleg</span><span class="extra-dist">' + metersToYards(dDog) + '</span></div>';
-      }
+      if (dDog !== null) el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-dg"></span><span class="extra-label">Dogleg</span><span class="extra-dist">' + metersToYards(dDog) + '</span></div>';
     }
     if (hole.layups && hole.layups.length) {
       hole.layups.forEach(function (lp) {
         var dLp = distTo(lp);
-        if (dLp !== null) {
-          el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-lu"></span><span class="extra-label">' + (lp.label || "Layup") + '</span><span class="extra-dist">' + metersToYards(dLp) + '</span></div>';
-        }
+        if (dLp !== null) el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-lu"></span><span class="extra-label">' + (lp.label || "Layup") + '</span><span class="extra-dist">' + metersToYards(dLp) + '</span></div>';
       });
     }
 
-    // Hazards — show nearest 3 sorted by distance
-    var hazards = hole.hazards.map(function (hz) {
-      return { label: hz.label, dist: distTo(hz) };
-    }).filter(function (h) { return h.dist !== null; })
-      .sort(function (a, b) { return a.dist - b.dist; })
-      .slice(0, 3);
-
+    var hazards = hole.hazards.map(function (hz) { return { label: hz.label, dist: distTo(hz) }; })
+      .filter(function (h) { return h.dist !== null; }).sort(function (a, b) { return a.dist - b.dist; }).slice(0, 3);
     el.hazardList.innerHTML = "";
     hazards.forEach(function (hz) {
       var div = document.createElement("div"); div.className = "hz-row";
@@ -285,13 +278,11 @@
       el.hazardList.appendChild(div);
     });
 
-    // GPS status
     if (gpsAcc !== null) {
       var cls = gpsAcc <= 5 ? "good" : gpsAcc <= 15 ? "warn" : "bad";
       el.gpsStatus.textContent = "GPS: \u00b1" + gpsAcc.toFixed(0) + "m";
       el.gpsStatus.className = "gps-status " + cls;
     }
-
     renderHoleDots();
   }
 
@@ -301,59 +292,60 @@
     playerLng = pos.coords.longitude;
     gpsAcc = pos.coords.accuracy;
 
-    // First fix — show HUD
     if (!el.loading.classList.contains("hidden")) {
       el.loading.classList.add("hidden");
       el.hud.classList.remove("hidden");
       renderHoleDots();
-
-      // Auto-detect starting hole (find nearest tee)
       var bestDist = Infinity, bestIdx = 0;
       holes.forEach(function (h, idx) {
         var d = distTo(h.tee);
         if (d !== null && d < bestDist) { bestDist = d; bestIdx = idx; }
       });
       currentHole = bestIdx;
+      lastSpokenHole = currentHole;
+      speakHoleChange(holes[currentHole]);
     }
-
     detectHole();
     update();
   }
 
   function onError(err) {
-    var msgs = {
-      1: "Location permission denied. Allow location access and reload.",
-      2: "Position unavailable. Make sure you are outdoors with GPS signal.",
-      3: "Location request timed out. Try again."
-    };
-    el.loading.classList.add("hidden");
-    el.error.classList.remove("hidden");
-    el.errTitle.textContent = "GPS Error";
-    el.errMsg.textContent = msgs[err.code] || ("Error: " + err.message);
+    var msgs = { 1: "Location permission denied. Allow location and reload.", 2: "Position unavailable. Go outdoors.", 3: "Location timed out. Try again." };
+    el.loading.classList.add("hidden"); el.error.classList.remove("hidden");
+    el.errTitle.textContent = "GPS Error"; el.errMsg.textContent = msgs[err.code] || ("Error: " + err.message);
   }
 
   if (!("geolocation" in navigator)) {
-    el.loading.classList.add("hidden");
-    el.error.classList.remove("hidden");
-    el.errTitle.textContent = "No GPS";
-    el.errMsg.textContent = "Geolocation is not available in this browser.";
+    el.loading.classList.add("hidden"); el.error.classList.remove("hidden");
+    el.errTitle.textContent = "No GPS"; el.errMsg.textContent = "Geolocation not available.";
   } else {
-    navigator.geolocation.watchPosition(onPosition, onError, {
-      enableHighAccuracy: true, maximumAge: 0, timeout: 30000
-    });
+    navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
   }
 
-  // ===== NAV =====
+  // ===== CONTROLS =====
   el.prevBtn.addEventListener("click", function () {
-    if (currentHole > 0) { currentHole--; update(); }
+    if (currentHole > 0) { currentHole--; update(); lastSpokenHole = currentHole; speakHoleChange(holes[currentHole]); }
   });
   el.nextBtn.addEventListener("click", function () {
-    if (currentHole < 17) { currentHole++; update(); }
+    if (currentHole < 17) { currentHole++; update(); lastSpokenHole = currentHole; speakHoleChange(holes[currentHole]); }
   });
 
-  // Initial render
-  update();
-  renderHoleDots();
+  // Tap yardage for full voice update
+  el.yardageTap.addEventListener("click", function () {
+    if (!hasSpeech) { el.tapHint.textContent = "voice not supported"; return; }
+    speakFullUpdate();
+  });
+
+  // Mute toggle
+  el.muteBtn.addEventListener("click", function () {
+    voiceOn = !voiceOn;
+    if (!voiceOn) { speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.className = "mute-btn"; }
+    else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.className = "mute-btn on"; }
+  });
+
+  if (!hasSpeech) { el.tapHint.textContent = "voice not available"; el.muteBtn.classList.add("hidden"); }
+
+  update(); renderHoleDots();
 })();
 </script>
 </body>
