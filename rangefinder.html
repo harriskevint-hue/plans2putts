@@ -2,143 +2,243 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Plans2Putts — Rangefinder</title>
+<meta name="viewport" content="width=600, initial-scale=1.0, user-scalable=no">
+<title>Plans2Putts</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0a; --primary: #ffffff; --green: #4ade80; --green-dim: #22c55e;
-    --amber: #fbbf24; --red: #f87171; --dim: #6b7280; --dim2: #374151; --panel: #111111;
+    --bg: #000000;
+    --primary: #ffffff;
+    --green: #4ade80;
+    --green-dim: #22c55e;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --dim: #6b7280;
+    --dim2: #374151;
+    --accent-bg: rgba(74,222,128,0.08);
+    --accent-border: #4ade80;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; background: var(--bg); color: var(--primary); overflow: hidden; }
-  body {
-    font-family: 'DM Mono', ui-monospace, monospace;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    height: 100vh; padding: 16px;
+  html, body { height: 100%; width: 100%; max-width: 600px; max-height: 600px; background: #000; color: var(--primary); overflow: hidden; }
+  body { font-family: 'DM Mono', ui-monospace, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100%; }
+
+  /* ===== SCREENS ===== */
+  .screen { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  .hidden { display: none !important; }
+
+  /* ===== SELECTION SCREENS ===== */
+  .screen-title { font-family: 'Anton', sans-serif; font-size: 1.4rem; color: var(--green); letter-spacing: 0.1em; margin-bottom: 24px; text-align: center; }
+  .nav-list { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 8px; }
+  .nav-item {
+    width: 100%; padding: 14px 20px; border-radius: 10px;
+    border: 2px solid var(--dim2); color: var(--dim);
+    font-family: 'DM Mono', monospace; font-size: 1rem; font-weight: 500;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; transition: all 0.1s; background: transparent;
   }
-  .hud { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .hole-bar { display: flex; align-items: center; gap: 16px; width: 100%; justify-content: center; padding: 8px 0; }
+  .nav-item:focus, .nav-item.focused {
+    border-color: var(--accent-border); color: var(--primary);
+    background: var(--accent-bg); outline: none;
+  }
+  .nav-item.focused { box-shadow: 0 0 0 1px var(--green); }
+  .nav-item .nav-sub { font-size: 0.75rem; color: var(--dim); }
+  .nav-item.focused .nav-sub { color: var(--green-dim); }
+  .screen-hint { font-size: 0.65rem; color: var(--dim2); letter-spacing: 0.12em; margin-top: 20px; text-align: center; }
+
+  /* ===== FOCUSABLE (Meta requirement) ===== */
+  .focusable:focus { outline: 2px solid var(--green); outline-offset: 2px; }
+
+  /* ===== LOADING / ERROR ===== */
+  .state-msg { text-align: center; padding: 40px 20px; }
+  .state-msg h2 { font-family: 'Anton', sans-serif; font-size: 2rem; margin-bottom: 12px; }
+  .state-msg p { font-size: 0.85rem; color: var(--dim); line-height: 1.6; max-width: 280px; margin: 0 auto; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--dim2); border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== HUD ===== */
+  #screenHUD { gap: 6px; padding: 12px; }
+  .tee-badge { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--dim2); text-transform: uppercase; }
+  .tee-badge span { color: var(--amber); }
+  .hole-bar { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: center; }
   .hole-bar button {
     font-family: 'DM Mono', monospace; font-size: 1.2rem; font-weight: 500;
     background: none; border: 2px solid var(--dim2); color: var(--dim);
     width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
   }
-  .hole-bar button:active { border-color: var(--green); color: var(--green); }
+  .hole-bar button:focus { border-color: var(--green); color: var(--green); outline: none; }
   .hole-info { text-align: center; }
-  .hole-num { font-family: 'Anton', sans-serif; font-size: 1.6rem; letter-spacing: 0.05em; color: var(--green); }
-  .hole-par { font-size: 0.75rem; color: var(--dim); letter-spacing: 0.15em; text-transform: uppercase; }
-  .yardage-wrap { text-align: center; padding: 8px 0; cursor: pointer; }
-  .yardage-label { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); margin-bottom: -4px; }
-  .yardage {
-    font-family: 'Anton', sans-serif; font-size: min(28vw, 160px); line-height: 1;
-    color: var(--primary); letter-spacing: -0.02em;
-    text-shadow: 0 0 40px rgba(74, 222, 128, 0.15);
-  }
-  .yardage-unit { font-size: 0.7rem; letter-spacing: 0.15em; color: var(--dim); text-transform: uppercase; }
-  .tap-hint { font-size: 0.6rem; color: var(--dim2); letter-spacing: 0.1em; margin-top: 2px; }
+  .hole-num { font-family: 'Anton', sans-serif; font-size: 1.5rem; color: var(--green); }
+  .hole-meta { font-size: 0.7rem; color: var(--dim); letter-spacing: 0.1em; }
+  .yardage-wrap { text-align: center; cursor: pointer; }
+  .yardage-label { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; }
+  .yardage { font-family: 'Anton', sans-serif; font-size: min(25vw, 144px); line-height: 1; color: var(--primary); letter-spacing: -0.02em; }
+  .yardage-unit { font-size: 0.65rem; letter-spacing: 0.15em; color: var(--dim); text-transform: uppercase; }
+  .tap-hint { font-size: 0.58rem; color: var(--dim2); letter-spacing: 0.08em; }
   .tap-hint.speaking { color: var(--green); }
-  .fb-row {
-    display: flex; gap: 32px; justify-content: center;
-    padding: 6px 0; border-top: 1px solid var(--dim2); border-bottom: 1px solid var(--dim2);
-    width: 80%; max-width: 320px;
-  }
+  .fb-row { display: flex; gap: 24px; justify-content: center; padding: 5px 0; border-top: 1px solid var(--dim2); border-bottom: 1px solid var(--dim2); width: 80%; max-width: 300px; }
   .fb-item { text-align: center; }
-  .fb-label { font-size: 0.6rem; letter-spacing: 0.15em; color: var(--dim); text-transform: uppercase; }
-  .fb-val { font-family: 'Anton', sans-serif; font-size: 2rem; color: var(--green); }
-  .hazards { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 4px; padding: 6px 0; }
-  .hz-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--amber); padding: 4px 12px; }
-  .hz-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); flex: none; }
-  .hz-name { flex: 1; color: var(--dim); font-size: 0.7rem; }
-  .hz-dist { font-family: 'Anton', sans-serif; font-size: 1.1rem; }
-  .extra-row { display: flex; gap: 24px; justify-content: center; padding: 2px 0; }
-  .extra-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; }
-  .extra-item .dot-dg { width: 8px; height: 8px; border-radius: 50%; background: #facc15; }
-  .extra-item .dot-lu { width: 8px; height: 8px; border-radius: 50%; background: #a78bfa; }
-  .extra-dist { font-family: 'Anton', sans-serif; font-size: 1rem; }
-  .extra-label { color: var(--dim); font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; }
-  .hole-dots { display: flex; gap: 5px; justify-content: center; padding: 8px 0; }
-  .hdot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim2); }
-  .hdot.done { background: var(--dim); } .hdot.active { background: var(--green); box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+  .fb-label { font-size: 0.58rem; letter-spacing: 0.1em; color: var(--dim); text-transform: uppercase; }
+  .fb-val { font-family: 'Anton', sans-serif; font-size: 1.8rem; color: var(--green); }
+  .official-yd { font-size: 0.6rem; color: var(--dim2); text-align: center; letter-spacing: 0.05em; }
+  .extra-row { display: flex; gap: 20px; justify-content: center; }
+  .extra-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; }
+  .dot-dg { width: 7px; height: 7px; border-radius: 50%; background: #facc15; }
+  .dot-lu { width: 7px; height: 7px; border-radius: 50%; background: #a78bfa; }
+  .extra-dist { font-family: 'Anton', sans-serif; font-size: 0.95rem; }
+  .extra-label { color: var(--dim); font-size: 0.58rem; text-transform: uppercase; }
+  .hazards { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 3px; }
+  .hz-row { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; padding: 3px 10px; }
+  .hz-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); flex: none; }
+  .hz-name { flex: 1; color: var(--dim); font-size: 0.65rem; }
+  .hz-dist { font-family: 'Anton', sans-serif; font-size: 1rem; color: var(--amber); }
+  .hole-dots { display: flex; gap: 4px; justify-content: center; }
+  .hdot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim2); }
+  .hdot.done { background: var(--dim); }
+  .hdot.active { background: var(--green); box-shadow: 0 0 6px rgba(74,222,128,0.5); }
   .bottom-bar { display: flex; align-items: center; justify-content: center; gap: 16px; width: 100%; }
-  .gps-status { font-size: 0.6rem; color: var(--dim); letter-spacing: 0.1em; }
-  .gps-status.good { color: var(--green-dim); } .gps-status.warn { color: var(--amber); } .gps-status.bad { color: var(--red); }
-  .mute-btn {
-    font-family: inherit; font-size: 1.2rem; background: none; border: 1px solid var(--dim2);
-    color: var(--dim); width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+  .gps-status { font-size: 0.58rem; color: var(--dim); letter-spacing: 0.08em; }
+  .gps-status.good { color: var(--green-dim); }
+  .gps-status.warn { color: var(--amber); }
+  .gps-status.bad { color: var(--red); }
+  .icon-btn {
+    font-family: inherit; font-size: 1rem; background: none; border: 1px solid var(--dim2);
+    color: var(--dim); width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
   }
-  .mute-btn.on { border-color: var(--green-dim); color: var(--green); }
-  .state-msg { text-align: center; padding: 40px 20px; }
-  .state-msg h2 { font-family: 'Anton', sans-serif; font-size: 2rem; margin-bottom: 12px; }
-  .state-msg p { font-size: 0.85rem; color: var(--dim); line-height: 1.6; max-width: 300px; margin: 0 auto; }
-  .spinner { width: 40px; height: 40px; border: 3px solid var(--dim2); border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .hidden { display: none !important; }
+  .icon-btn.on { border-color: var(--green-dim); color: var(--green); }
+  .icon-btn.focusable:focus { outline: 2px solid var(--green); }
 </style>
 </head>
 <body>
-  <div id="stateLoading" class="state-msg">
+
+  <div id="stateLoading" class="screen state-msg">
     <div class="spinner"></div>
     <h2>Acquiring GPS</h2>
-    <p>Stand outside with a clear sky view. Allow location when prompted.</p>
+    <p>Stand outside. Allow location when prompted.</p>
   </div>
-  <div id="stateError" class="state-msg hidden">
-    <h2 id="errTitle">GPS Unavailable</h2>
-    <p id="errMsg">Could not access location.</p>
+
+  <div id="stateError" class="screen state-msg hidden">
+    <h2 id="errTitle">GPS Error</h2>
+    <p id="errMsg"></p>
   </div>
-  <div id="hud" class="hud hidden">
+
+  <!-- Course Selection -->
+  <div id="screenCourse" class="screen hidden">
+    <div class="screen-title">Select Course</div>
+    <div class="nav-list" id="courseList"></div>
+    <div class="screen-hint">&#x2191;&#x2193; navigate &nbsp;&middot;&nbsp; Enter / pinch to select</div>
+  </div>
+
+  <!-- Tee Selection -->
+  <div id="screenTee" class="screen hidden">
+    <div class="screen-title">Select Tees</div>
+    <div class="nav-list" id="teeList"></div>
+    <div class="screen-hint">&#x2191;&#x2193; navigate &nbsp;&middot;&nbsp; Enter / pinch to select</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="screenHUD" class="screen hidden">
+    <div class="tee-badge" id="teeBadge"></div>
     <div class="hole-bar">
-      <button id="prevBtn">&#8249;</button>
+      <button class="focusable" id="prevBtn" tabindex="0">&#8249;</button>
       <div class="hole-info">
         <div class="hole-num" id="holeNum">HOLE 1</div>
-        <div class="hole-par" id="holePar">Par 4</div>
+        <div class="hole-meta" id="holeMeta">Par 4</div>
       </div>
-      <button id="nextBtn">&#8250;</button>
+      <button class="focusable" id="nextBtn" tabindex="0">&#8250;</button>
     </div>
-    <div class="yardage-wrap" id="yardageTap">
+    <div class="yardage-wrap focusable" id="yardageTap" tabindex="0">
       <div class="yardage-label">to center</div>
       <div class="yardage" id="yardCenter">---</div>
       <div class="yardage-unit">yards</div>
-      <div class="tap-hint" id="tapHint">tap for voice</div>
+      <div class="tap-hint" id="tapHint">Enter or tap for voice</div>
     </div>
     <div class="fb-row">
       <div class="fb-item"><div class="fb-label">Front</div><div class="fb-val" id="yardFront">--</div></div>
       <div class="fb-item"><div class="fb-label">Back</div><div class="fb-val" id="yardBack">--</div></div>
     </div>
+    <div class="official-yd" id="officialYd"></div>
     <div class="extra-row" id="extraRow"></div>
     <div class="hazards" id="hazardList"></div>
     <div class="hole-dots" id="holeDots"></div>
     <div class="bottom-bar">
+      <button class="icon-btn focusable" id="courseBtn" tabindex="0" title="Change course">&#127922;</button>
       <div class="gps-status" id="gpsStatus">GPS: acquiring...</div>
-      <button class="mute-btn on" id="muteBtn" title="Toggle voice">&#x1f50a;</button>
+      <button class="icon-btn on focusable" id="muteBtn" tabindex="0" title="Toggle voice">&#x1f50a;</button>
     </div>
   </div>
+
 <script>
 (function () {
   "use strict";
 
-  var COURSE = {"course":"White Horse Golf Club","holes":[{"hole":1,"par":4,"tee":{"lat":47.768034,"lng":-122.532291},"green":{"front":{"lat":47.76899,"lng":-122.535705},"center":{"lat":47.769026,"lng":-122.535812},"back":{"lat":47.769074,"lng":-122.535946}},"hazards":[{"label":"hazard 1","lat":47.768168,"lng":-122.532596},{"label":"hazard 2","lat":47.768413,"lng":-122.533498},{"label":"hazard 3","lat":47.768582,"lng":-122.533916},{"label":"hazard 4","lat":47.768845,"lng":-122.534643},{"label":"hazard 5","lat":47.768935,"lng":-122.535987}],"dogleg":null,"layups":[]},{"hole":2,"par":4,"tee":{"lat":47.76944,"lng":-122.536786},"green":{"front":{"lat":47.772029,"lng":-122.536842},"center":{"lat":47.772102,"lng":-122.536789},"back":{"lat":47.772176,"lng":-122.536703}},"hazards":[{"label":"hazard 1","lat":47.771186,"lng":-122.536743},{"label":"hazard 2","lat":47.771902,"lng":-122.5367},{"label":"hazard 3","lat":47.772286,"lng":-122.536786}],"dogleg":null,"layups":[]},{"hole":3,"par":5,"tee":{"lat":47.771511,"lng":-122.539111},"green":{"front":{"lat":47.768334,"lng":-122.538969},"center":{"lat":47.768207,"lng":-122.53894},"back":{"lat":47.768096,"lng":-122.538924}},"hazards":[{"label":"hazard 1","lat":47.769934,"lng":-122.539428},{"label":"hazard 2","lat":47.76911,"lng":-122.539685},{"label":"hazard 3","lat":47.768598,"lng":-122.539079},{"label":"hazard 4","lat":47.768097,"lng":-122.538744}],"dogleg":null,"layups":[]},{"hole":4,"par":3,"tee":{"lat":47.767731,"lng":-122.53939},"green":{"front":{"lat":47.766848,"lng":-122.537908},"center":{"lat":47.766712,"lng":-122.537806},"back":{"lat":47.76655,"lng":-122.53771}},"hazards":[{"label":"hazard 1","lat":47.766766,"lng":-122.53806},{"label":"hazard 2","lat":47.766622,"lng":-122.538038}],"dogleg":null,"layups":[]},{"hole":5,"par":4,"tee":{"lat":47.766717,"lng":-122.535721},"green":{"front":{"lat":47.764358,"lng":-122.534359},"center":{"lat":47.764244,"lng":-122.534224},"back":{"lat":47.764103,"lng":-122.534171}},"hazards":[{"label":"hazard 1","lat":47.76619,"lng":-122.535324},{"label":"hazard 2","lat":47.764971,"lng":-122.534455},{"label":"hazard 3","lat":47.764325,"lng":-122.534058}],"dogleg":null,"layups":[]},{"hole":6,"par":3,"tee":{"lat":47.763398,"lng":-122.534493},"green":{"front":{"lat":47.762775,"lng":-122.533524},"center":{"lat":47.762663,"lng":-122.533487},"back":{"lat":47.76255,"lng":-122.533377}},"hazards":[{"label":"hazard 1","lat":47.762946,"lng":-122.534195},{"label":"hazard 2","lat":47.762683,"lng":-122.533927},{"label":"hazard 3","lat":47.762487,"lng":-122.53361},{"label":"hazard 4","lat":47.762683,"lng":-122.533299}],"dogleg":null,"layups":[]},{"hole":7,"par":4,"tee":{"lat":47.75998,"lng":-122.531781},"green":{"front":{"lat":47.75801,"lng":-122.532341},"center":{"lat":47.757918,"lng":-122.532382},"back":{"lat":47.757831,"lng":-122.532427}},"hazards":[{"label":"hazard 1","lat":47.75889,"lng":-122.5325},{"label":"hazard 2","lat":47.758008,"lng":-122.532513}],"dogleg":null,"layups":[]},{"hole":8,"par":5,"tee":{"lat":47.759135,"lng":-122.534884},"green":{"front":{"lat":47.761898,"lng":-122.533986},"center":{"lat":47.761956,"lng":-122.53387},"back":{"lat":47.762084,"lng":-122.533838}},"hazards":[{"label":"hazard 1","lat":47.759595,"lng":-122.534316},{"label":"hazard 2","lat":47.761565,"lng":-122.534479},{"label":"hazard 3","lat":47.761806,"lng":-122.533835},{"label":"hazard 4","lat":47.761841,"lng":-122.534063}],"dogleg":null,"layups":[]},{"hole":9,"par":4,"tee":{"lat":47.764556,"lng":-122.531671},"green":{"front":{"lat":47.767429,"lng":-122.532293},"center":{"lat":47.767527,"lng":-122.53232},"back":{"lat":47.767624,"lng":-122.532406}},"hazards":[{"label":"hazard 1","lat":47.766406,"lng":-122.532197},{"label":"hazard 2","lat":47.767736,"lng":-122.532358}],"dogleg":null,"layups":[]},{"hole":10,"par":4,"tee":{"lat":47.768054,"lng":-122.530727},"green":{"front":{"lat":47.766042,"lng":-122.529509},"center":{"lat":47.766078,"lng":-122.529155},"back":{"lat":47.76615,"lng":-122.528983}},"hazards":[{"label":"hazard 1","lat":47.766561,"lng":-122.530475},{"label":"hazard 2","lat":47.766416,"lng":-122.531193},{"label":"hazard 3","lat":47.766143,"lng":-122.529407}],"dogleg":{"lat":47.766532,"lng":-122.53078},"layups":[{"label":"layup 1","lat":47.766438,"lng":-122.530829}]},{"hole":11,"par":4,"tee":{"lat":47.76744,"lng":-122.528479},"green":{"front":{"lat":47.767403,"lng":-122.525657},"center":{"lat":47.767335,"lng":-122.525521},"back":{"lat":47.767238,"lng":-122.525446}},"hazards":[{"label":"hazard 1","lat":47.767303,"lng":-122.526113},{"label":"hazard 2","lat":47.767332,"lng":-122.525808},{"label":"hazard 3","lat":47.767617,"lng":-122.526231}],"dogleg":null,"layups":[]},{"hole":12,"par":4,"tee":{"lat":47.768749,"lng":-122.523125},"green":{"front":{"lat":47.770429,"lng":-122.523109},"center":{"lat":47.770548,"lng":-122.522981},"back":{"lat":47.770675,"lng":-122.522857}},"hazards":[{"label":"hazard 1","lat":47.769925,"lng":-122.522884}],"dogleg":null,"layups":[]},{"hole":13,"par":3,"tee":{"lat":47.771111,"lng":-122.523023},"green":{"front":{"lat":47.772159,"lng":-122.52238},"center":{"lat":47.772268,"lng":-122.522358},"back":{"lat":47.772366,"lng":-122.522294}},"hazards":[{"label":"hazard 1","lat":47.772188,"lng":-122.522192},{"label":"hazard 2","lat":47.772138,"lng":-122.522546},{"label":"hazard 3","lat":47.772433,"lng":-122.522466}],"dogleg":null,"layups":[]},{"hole":14,"par":5,"tee":{"lat":47.771464,"lng":-122.521768},"green":{"front":{"lat":47.768,"lng":-122.522466},"center":{"lat":47.767913,"lng":-122.522535},"back":{"lat":47.767856,"lng":-122.522621}},"hazards":[{"label":"hazard 1","lat":47.768767,"lng":-122.522026},{"label":"hazard 2","lat":47.768231,"lng":-122.522444},{"label":"hazard 3","lat":47.767928,"lng":-122.522305},{"label":"hazard 4","lat":47.767758,"lng":-122.522605}],"dogleg":null,"layups":[]},{"hole":15,"par":4,"tee":{"lat":47.767917,"lng":-122.525609},"green":{"front":{"lat":47.769125,"lng":-122.528222},"center":{"lat":47.769255,"lng":-122.528232},"back":{"lat":47.769429,"lng":-122.528262}},"hazards":[{"label":"hazard 1","lat":47.768481,"lng":-122.526854},{"label":"hazard 2","lat":47.769033,"lng":-122.527707},{"label":"hazard 3","lat":47.769157,"lng":-122.528007},{"label":"hazard 4","lat":47.769335,"lng":-122.528063},{"label":"hazard 5","lat":47.769469,"lng":-122.528262}],"dogleg":null,"layups":[]},{"hole":16,"par":5,"tee":{"lat":47.770686,"lng":-122.530764},"green":{"front":{"lat":47.772034,"lng":-122.535008},"center":{"lat":47.772059,"lng":-122.535147},"back":{"lat":47.772111,"lng":-122.535295}},"hazards":[{"label":"hazard 1","lat":47.770861,"lng":-122.531118},{"label":"hazard 2","lat":47.770963,"lng":-122.531601},{"label":"hazard 3","lat":47.771423,"lng":-122.531781},{"label":"hazard 4","lat":47.771461,"lng":-122.532138},{"label":"hazard 5","lat":47.771266,"lng":-122.532441},{"label":"hazard 6","lat":47.771855,"lng":-122.534409},{"label":"hazard 7","lat":47.771956,"lng":-122.534946},{"label":"hazard 8","lat":47.7722,"lng":-122.535203}],"dogleg":null,"layups":[]},{"hole":17,"par":3,"tee":{"lat":47.771648,"lng":-122.535968},"green":{"front":{"lat":47.770668,"lng":-122.536097},"center":{"lat":47.770527,"lng":-122.536059},"back":{"lat":47.770397,"lng":-122.535992}},"hazards":[{"label":"hazard 1","lat":47.770714,"lng":-122.535946},{"label":"hazard 2","lat":47.770581,"lng":-122.535893},{"label":"hazard 3","lat":47.770368,"lng":-122.536139}],"dogleg":null,"layups":[]},{"hole":18,"par":4,"tee":{"lat":47.769923,"lng":-122.535844},"green":{"front":{"lat":47.768746,"lng":-122.531746},"center":{"lat":47.768809,"lng":-122.531569},"back":{"lat":47.768894,"lng":-122.531269}},"hazards":[{"label":"hazard 1","lat":47.769465,"lng":-122.533532},{"label":"hazard 2","lat":47.769258,"lng":-122.532886},{"label":"hazard 3","lat":47.769017,"lng":-122.532304},{"label":"hazard 4","lat":47.768716,"lng":-122.533347},{"label":"hazard 5","lat":47.768723,"lng":-122.533208},{"label":"hazard 6","lat":47.76871,"lng":-122.533063},{"label":"hazard 7","lat":47.768703,"lng":-122.531419},{"label":"hazard 8","lat":47.768768,"lng":-122.531325}],"dogleg":null,"layups":[]}]};
+  // ===== COURSE DATA =====
+  var COURSES = {
+    "white-horse": {
+      course: "White Horse Golf Club",
+      tees: {
+        green: { label: "Green", total: 7080, holes: [393,438,538,215,410,169,445,567,465,401,357,364,206,560,366,569,182,435] },
+        black: { label: "Black", total: 6687, holes: [364,409,506,197,380,156,425,535,435,376,328,364,185,550,337,551,168,421] },
+        blue:  { label: "Blue",  total: 6197, holes: [327,382,480,176,352,144,408,494,427,341,304,343,176,500,315,504,139,385] },
+        white: { label: "White", total: 5532, holes: [313,346,417,145,316,116,294,450,399,309,289,319,152,448,289,451,125,354] },
+        gold:  { label: "Gold",  total: 5006, holes: [267,327,381,122,295,100,283,423,362,287,235,269,132,416,273,418,99,317] }
+      },
+      holes: [
+        {"hole":1,"par":4,"tee":{"lat":47.768034,"lng":-122.532291},"green":{"front":{"lat":47.76899,"lng":-122.535705},"center":{"lat":47.769026,"lng":-122.535812},"back":{"lat":47.769074,"lng":-122.535946}},"hazards":[{"label":"hazard 1","lat":47.768168,"lng":-122.532596},{"label":"hazard 2","lat":47.768413,"lng":-122.533498},{"label":"hazard 3","lat":47.768582,"lng":-122.533916},{"label":"hazard 4","lat":47.768845,"lng":-122.534643},{"label":"hazard 5","lat":47.768935,"lng":-122.535987}],"dogleg":null,"layups":[]},
+        {"hole":2,"par":4,"tee":{"lat":47.76944,"lng":-122.536786},"green":{"front":{"lat":47.772029,"lng":-122.536842},"center":{"lat":47.772102,"lng":-122.536789},"back":{"lat":47.772176,"lng":-122.536703}},"hazards":[{"label":"hazard 1","lat":47.771186,"lng":-122.536743},{"label":"hazard 2","lat":47.771902,"lng":-122.5367},{"label":"hazard 3","lat":47.772286,"lng":-122.536786}],"dogleg":null,"layups":[]},
+        {"hole":3,"par":5,"tee":{"lat":47.771511,"lng":-122.539111},"green":{"front":{"lat":47.768334,"lng":-122.538969},"center":{"lat":47.768207,"lng":-122.53894},"back":{"lat":47.768096,"lng":-122.538924}},"hazards":[{"label":"hazard 1","lat":47.769934,"lng":-122.539428},{"label":"hazard 2","lat":47.76911,"lng":-122.539685},{"label":"hazard 3","lat":47.768598,"lng":-122.539079},{"label":"hazard 4","lat":47.768097,"lng":-122.538744}],"dogleg":null,"layups":[]},
+        {"hole":4,"par":3,"tee":{"lat":47.767731,"lng":-122.53939},"green":{"front":{"lat":47.766848,"lng":-122.537908},"center":{"lat":47.766712,"lng":-122.537806},"back":{"lat":47.76655,"lng":-122.53771}},"hazards":[{"label":"hazard 1","lat":47.766766,"lng":-122.53806},{"label":"hazard 2","lat":47.766622,"lng":-122.538038}],"dogleg":null,"layups":[]},
+        {"hole":5,"par":4,"tee":{"lat":47.766717,"lng":-122.535721},"green":{"front":{"lat":47.764358,"lng":-122.534359},"center":{"lat":47.764244,"lng":-122.534224},"back":{"lat":47.764103,"lng":-122.534171}},"hazards":[{"label":"hazard 1","lat":47.76619,"lng":-122.535324},{"label":"hazard 2","lat":47.764971,"lng":-122.534455},{"label":"hazard 3","lat":47.764325,"lng":-122.534058}],"dogleg":null,"layups":[]},
+        {"hole":6,"par":3,"tee":{"lat":47.763398,"lng":-122.534493},"green":{"front":{"lat":47.762775,"lng":-122.533524},"center":{"lat":47.762663,"lng":-122.533487},"back":{"lat":47.76255,"lng":-122.533377}},"hazards":[{"label":"hazard 1","lat":47.762946,"lng":-122.534195},{"label":"hazard 2","lat":47.762683,"lng":-122.533927},{"label":"hazard 3","lat":47.762487,"lng":-122.53361},{"label":"hazard 4","lat":47.762683,"lng":-122.533299}],"dogleg":null,"layups":[]},
+        {"hole":7,"par":4,"tee":{"lat":47.75998,"lng":-122.531781},"green":{"front":{"lat":47.75801,"lng":-122.532341},"center":{"lat":47.757918,"lng":-122.532382},"back":{"lat":47.757831,"lng":-122.532427}},"hazards":[{"label":"hazard 1","lat":47.75889,"lng":-122.5325},{"label":"hazard 2","lat":47.758008,"lng":-122.532513}],"dogleg":null,"layups":[]},
+        {"hole":8,"par":5,"tee":{"lat":47.759135,"lng":-122.534884},"green":{"front":{"lat":47.761898,"lng":-122.533986},"center":{"lat":47.761956,"lng":-122.53387},"back":{"lat":47.762084,"lng":-122.533838}},"hazards":[{"label":"hazard 1","lat":47.759595,"lng":-122.534316},{"label":"hazard 2","lat":47.761565,"lng":-122.534479},{"label":"hazard 3","lat":47.761806,"lng":-122.533835},{"label":"hazard 4","lat":47.761841,"lng":-122.534063}],"dogleg":null,"layups":[]},
+        {"hole":9,"par":4,"tee":{"lat":47.764556,"lng":-122.531671},"green":{"front":{"lat":47.767429,"lng":-122.532293},"center":{"lat":47.767527,"lng":-122.53232},"back":{"lat":47.767624,"lng":-122.532406}},"hazards":[{"label":"hazard 1","lat":47.766406,"lng":-122.532197},{"label":"hazard 2","lat":47.767736,"lng":-122.532358}],"dogleg":null,"layups":[]},
+        {"hole":10,"par":4,"tee":{"lat":47.768054,"lng":-122.530727},"green":{"front":{"lat":47.766042,"lng":-122.529509},"center":{"lat":47.766078,"lng":-122.529155},"back":{"lat":47.76615,"lng":-122.528983}},"hazards":[{"label":"hazard 1","lat":47.766561,"lng":-122.530475},{"label":"hazard 2","lat":47.766416,"lng":-122.531193},{"label":"hazard 3","lat":47.766143,"lng":-122.529407}],"dogleg":{"lat":47.766532,"lng":-122.53078},"layups":[{"label":"layup 1","lat":47.766438,"lng":-122.530829}]},
+        {"hole":11,"par":4,"tee":{"lat":47.76744,"lng":-122.528479},"green":{"front":{"lat":47.767403,"lng":-122.525657},"center":{"lat":47.767335,"lng":-122.525521},"back":{"lat":47.767238,"lng":-122.525446}},"hazards":[{"label":"hazard 1","lat":47.767303,"lng":-122.526113},{"label":"hazard 2","lat":47.767332,"lng":-122.525808},{"label":"hazard 3","lat":47.767617,"lng":-122.526231}],"dogleg":null,"layups":[]},
+        {"hole":12,"par":4,"tee":{"lat":47.768749,"lng":-122.523125},"green":{"front":{"lat":47.770429,"lng":-122.523109},"center":{"lat":47.770548,"lng":-122.522981},"back":{"lat":47.770675,"lng":-122.522857}},"hazards":[{"label":"hazard 1","lat":47.769925,"lng":-122.522884}],"dogleg":null,"layups":[]},
+        {"hole":13,"par":3,"tee":{"lat":47.771111,"lng":-122.523023},"green":{"front":{"lat":47.772159,"lng":-122.52238},"center":{"lat":47.772268,"lng":-122.522358},"back":{"lat":47.772366,"lng":-122.522294}},"hazards":[{"label":"hazard 1","lat":47.772188,"lng":-122.522192},{"label":"hazard 2","lat":47.772138,"lng":-122.522546},{"label":"hazard 3","lat":47.772433,"lng":-122.522466}],"dogleg":null,"layups":[]},
+        {"hole":14,"par":5,"tee":{"lat":47.771464,"lng":-122.521768},"green":{"front":{"lat":47.768,"lng":-122.522466},"center":{"lat":47.767913,"lng":-122.522535},"back":{"lat":47.767856,"lng":-122.522621}},"hazards":[{"label":"hazard 1","lat":47.768767,"lng":-122.522026},{"label":"hazard 2","lat":47.768231,"lng":-122.522444},{"label":"hazard 3","lat":47.767928,"lng":-122.522305},{"label":"hazard 4","lat":47.767758,"lng":-122.522605}],"dogleg":null,"layups":[]},
+        {"hole":15,"par":4,"tee":{"lat":47.767917,"lng":-122.525609},"green":{"front":{"lat":47.769125,"lng":-122.528222},"center":{"lat":47.769255,"lng":-122.528232},"back":{"lat":47.769429,"lng":-122.528262}},"hazards":[{"label":"hazard 1","lat":47.768481,"lng":-122.526854},{"label":"hazard 2","lat":47.769033,"lng":-122.527707},{"label":"hazard 3","lat":47.769157,"lng":-122.528007},{"label":"hazard 4","lat":47.769335,"lng":-122.528063},{"label":"hazard 5","lat":47.769469,"lng":-122.528262}],"dogleg":null,"layups":[]},
+        {"hole":16,"par":5,"tee":{"lat":47.770686,"lng":-122.530764},"green":{"front":{"lat":47.772034,"lng":-122.535008},"center":{"lat":47.772059,"lng":-122.535147},"back":{"lat":47.772111,"lng":-122.535295}},"hazards":[{"label":"hazard 1","lat":47.770861,"lng":-122.531118},{"label":"hazard 2","lat":47.770963,"lng":-122.531601},{"label":"hazard 3","lat":47.771423,"lng":-122.531781},{"label":"hazard 4","lat":47.771461,"lng":-122.532138},{"label":"hazard 5","lat":47.771266,"lng":-122.532441},{"label":"hazard 6","lat":47.771855,"lng":-122.534409},{"label":"hazard 7","lat":47.771956,"lng":-122.534946},{"label":"hazard 8","lat":47.7722,"lng":-122.535203}],"dogleg":null,"layups":[]},
+        {"hole":17,"par":3,"tee":{"lat":47.771648,"lng":-122.535968},"green":{"front":{"lat":47.770668,"lng":-122.536097},"center":{"lat":47.770527,"lng":-122.536059},"back":{"lat":47.770397,"lng":-122.535992}},"hazards":[{"label":"hazard 1","lat":47.770714,"lng":-122.535946},{"label":"hazard 2","lat":47.770581,"lng":-122.535893},{"label":"hazard 3","lat":47.770368,"lng":-122.536139}],"dogleg":null,"layups":[]},
+        {"hole":18,"par":4,"tee":{"lat":47.769923,"lng":-122.535844},"green":{"front":{"lat":47.768746,"lng":-122.531746},"center":{"lat":47.768809,"lng":-122.531569},"back":{"lat":47.768894,"lng":-122.531269}},"hazards":[{"label":"hazard 1","lat":47.769465,"lng":-122.533532},{"label":"hazard 2","lat":47.769258,"lng":-122.532886},{"label":"hazard 3","lat":47.769017,"lng":-122.532304},{"label":"hazard 4","lat":47.768716,"lng":-122.533347},{"label":"hazard 5","lat":47.768723,"lng":-122.533208},{"label":"hazard 6","lat":47.76871,"lng":-122.533063},{"label":"hazard 7","lat":47.768703,"lng":-122.531419},{"label":"hazard 8","lat":47.768768,"lng":-122.531325}],"dogleg":null,"layups":[]}
+      ]
+    }
+  };
 
-  var holes = COURSE.holes;
+  var AVAILABLE_COURSES = [
+    { key: "white-horse", name: "White Horse Golf Club", holes: 18, sub: "Kingston, WA" }
+    // Add friends' courses here: { key: "friend-course", name: "...", holes: 18, sub: "City, ST", url: "https://..." }
+  ];
+
+  // ===== STATE =====
+  var activeCourse = null;
+  var selectedTeeKey = null;
   var currentHole = 0;
   var playerLat = null, playerLng = null, gpsAcc = null;
   var voiceOn = true;
   var lastSpokenHole = -1;
+  var currentScreen = "course";
+  var listFocusIdx = 0;
 
+  // ===== DOM =====
   var el = {
     loading: document.getElementById("stateLoading"),
     error: document.getElementById("stateError"),
     errTitle: document.getElementById("errTitle"),
     errMsg: document.getElementById("errMsg"),
-    hud: document.getElementById("hud"),
+    screenCourse: document.getElementById("screenCourse"),
+    screenTee: document.getElementById("screenTee"),
+    screenHUD: document.getElementById("screenHUD"),
+    courseList: document.getElementById("courseList"),
+    teeList: document.getElementById("teeList"),
+    teeBadge: document.getElementById("teeBadge"),
     holeNum: document.getElementById("holeNum"),
-    holePar: document.getElementById("holePar"),
+    holeMeta: document.getElementById("holeMeta"),
     yardCenter: document.getElementById("yardCenter"),
     yardFront: document.getElementById("yardFront"),
     yardBack: document.getElementById("yardBack"),
+    officialYd: document.getElementById("officialYd"),
     extraRow: document.getElementById("extraRow"),
     hazardList: document.getElementById("hazardList"),
     holeDots: document.getElementById("holeDots"),
@@ -147,205 +247,252 @@
     nextBtn: document.getElementById("nextBtn"),
     yardageTap: document.getElementById("yardageTap"),
     tapHint: document.getElementById("tapHint"),
-    muteBtn: document.getElementById("muteBtn")
+    muteBtn: document.getElementById("muteBtn"),
+    courseBtn: document.getElementById("courseBtn")
   };
+
+  // ===== SCREEN MANAGEMENT =====
+  function showScreen(name) {
+    currentScreen = name;
+    el.loading.classList.add("hidden");
+    el.error.classList.add("hidden");
+    el.screenCourse.classList.add("hidden");
+    el.screenTee.classList.add("hidden");
+    el.screenHUD.classList.add("hidden");
+    if (name === "course") { el.screenCourse.classList.remove("hidden"); buildCourseList(); }
+    else if (name === "tee") { el.screenTee.classList.remove("hidden"); buildTeeList(); }
+    else if (name === "hud") { el.screenHUD.classList.remove("hidden"); updateHUD(); }
+  }
+
+  // ===== COURSE SELECTION =====
+  function buildCourseList() {
+    el.courseList.innerHTML = "";
+    listFocusIdx = 0;
+    AVAILABLE_COURSES.forEach(function (c, idx) {
+      var btn = document.createElement("button");
+      btn.className = "nav-item focusable" + (idx === 0 ? " focused" : "");
+      btn.tabIndex = 0;
+      btn.innerHTML = '<span>' + c.name + '</span><span class="nav-sub">' + c.holes + ' holes &middot; ' + c.sub + '</span>';
+      btn.onclick = function () { selectCourse(idx); };
+      el.courseList.appendChild(btn);
+    });
+    focusList("courseList", 0);
+    speak("Select a course. " + AVAILABLE_COURSES[0].name);
+  }
+
+  function selectCourse(idx) {
+    var c = AVAILABLE_COURSES[idx];
+    if (c.url) {
+      fetch(c.url).then(function (r) { return r.json(); }).then(function (data) {
+        COURSES[c.key] = data; activateCourse(c.key);
+      }).catch(function () {
+        showError("Could not load " + c.name + ". Check your connection.");
+      });
+    } else {
+      activateCourse(c.key);
+    }
+  }
+
+  function activateCourse(key) {
+    activeCourse = COURSES[key];
+    if (activeCourse.tees) { showScreen("tee"); }
+    else { selectedTeeKey = null; showScreen("hud"); speak("Starting round at " + activeCourse.course); }
+  }
+
+  // ===== TEE SELECTION =====
+  function buildTeeList() {
+    el.teeList.innerHTML = "";
+    listFocusIdx = 0;
+    var tees = activeCourse.tees;
+    var keys = Object.keys(tees);
+    // Add "Skip" option first
+    var skipBtn = document.createElement("button");
+    skipBtn.className = "nav-item focusable focused";
+    skipBtn.tabIndex = 0;
+    skipBtn.innerHTML = '<span>GPS Distance Only</span><span class="nav-sub">no official yardage</span>';
+    skipBtn.onclick = function () { selectedTeeKey = null; showScreen("hud"); speak("Starting round. GPS only."); };
+    el.teeList.appendChild(skipBtn);
+    keys.forEach(function (key, idx) {
+      var t = tees[key];
+      var btn = document.createElement("button");
+      btn.className = "nav-item focusable";
+      btn.tabIndex = 0;
+      btn.innerHTML = '<span>' + t.label + ' Tees</span><span class="nav-sub">' + t.total.toLocaleString() + ' yd total</span>';
+      btn.onclick = (function (k) { return function () { selectedTeeKey = k; showScreen("hud"); speak(tees[k].label + " tees selected."); }; })(key);
+      el.teeList.appendChild(btn);
+    });
+    focusList("teeList", 0);
+    speak("Select your tees.");
+  }
+
+  // ===== LIST KEYBOARD NAV =====
+  function focusList(listId, idx) {
+    var list = document.getElementById(listId);
+    var items = list.querySelectorAll(".nav-item");
+    items.forEach(function (item, i) { item.classList.toggle("focused", i === idx); });
+    if (items[idx]) items[idx].focus();
+    listFocusIdx = idx;
+  }
+
+  function navList(dir) {
+    var listId = currentScreen === "course" ? "courseList" : "teeList";
+    var list = document.getElementById(listId);
+    var items = list.querySelectorAll(".nav-item");
+    var next = Math.max(0, Math.min(items.length - 1, listFocusIdx + dir));
+    focusList(listId, next);
+    if (currentScreen === "course" && AVAILABLE_COURSES[next]) speak(AVAILABLE_COURSES[next].name);
+    if (currentScreen === "tee") {
+      var tees = activeCourse.tees;
+      var keys = Object.keys(tees);
+      if (next === 0) speak("GPS distance only");
+      else { var k = keys[next - 1]; speak(tees[k].label + " tees. " + tees[k].total + " yards total."); }
+    }
+  }
+
+  function selectFocused() {
+    var listId = currentScreen === "course" ? "courseList" : "teeList";
+    var list = document.getElementById(listId);
+    var items = list.querySelectorAll(".nav-item");
+    if (items[listFocusIdx]) items[listFocusIdx].click();
+  }
+
+  // ===== MATH =====
+  function haversine(lat1, lng1, lat2, lng2) {
+    var R = 6371000;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLng = (lng2 - lng1) * Math.PI / 180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+  function m2y(m) { return Math.round(m * 1.09361); }
+  function distTo(pt) { if (!pt || playerLat === null) return null; return haversine(playerLat, playerLng, pt.lat, pt.lng); }
 
   // ===== VOICE =====
   var hasSpeech = "speechSynthesis" in window;
-
   function speak(text) {
     if (!hasSpeech || !voiceOn) return;
     speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(text);
     u.rate = 0.95;
-    u.pitch = 1.0;
-    u.volume = 1.0;
     u.onstart = function () { el.tapHint.textContent = "speaking..."; el.tapHint.className = "tap-hint speaking"; };
-    u.onend = function () { el.tapHint.textContent = "tap for voice"; el.tapHint.className = "tap-hint"; };
+    u.onend = function () { el.tapHint.textContent = "Enter or tap for voice"; el.tapHint.className = "tap-hint"; };
     speechSynthesis.speak(u);
   }
-
-  function speakHoleChange(hole) {
-    var dCenter = distTo(hole.green.center);
-    var yds = dCenter !== null ? metersToYards(dCenter) : null;
-    var msg = "Hole " + hole.hole + ". Par " + (hole.par || "unknown") + ".";
-    if (yds !== null) msg += " " + yds + " yards to center.";
-    speak(msg);
-  }
-
-  function speakFullUpdate() {
-    var hole = holes[currentHole];
-    var dCenter = distTo(hole.green.center);
-    var dFront = distTo(hole.green.front);
-    var dBack = distTo(hole.green.back);
-
+  function speakHUD() {
+    if (!activeCourse) return;
+    var hole = activeCourse.holes[currentHole];
+    var dC = distTo(hole.green.center), dF = distTo(hole.green.front), dB = distTo(hole.green.back);
     var msg = "";
-    if (dCenter !== null) msg += metersToYards(dCenter) + " to center.";
-    if (dFront !== null && dBack !== null) msg += " Front " + metersToYards(dFront) + ", back " + metersToYards(dBack) + ".";
-
-    // Nearest hazard
-    var nearest = hole.hazards.map(function (hz) {
-      return { label: hz.label, dist: distTo(hz) };
-    }).filter(function (h) { return h.dist !== null; })
-      .sort(function (a, b) { return a.dist - b.dist; });
-
-    if (nearest.length > 0) {
-      msg += " Nearest hazard, " + metersToYards(nearest[0].dist) + " yards.";
-    }
-
-    // Dogleg
-    if (hole.dogleg) {
-      var dDog = distTo(hole.dogleg);
-      if (dDog !== null) msg += " Dogleg, " + metersToYards(dDog) + ".";
-    }
-
+    if (dC !== null) msg += m2y(dC) + " to center.";
+    if (dF !== null && dB !== null) msg += " Front " + m2y(dF) + ", back " + m2y(dB) + ".";
+    var hz = hole.hazards.map(function (h) { return { label: h.label, dist: distTo(h) }; })
+      .filter(function (h) { return h.dist !== null; }).sort(function (a,b) { return a.dist-b.dist; });
+    if (hz.length) msg += " Nearest hazard " + m2y(hz[0].dist) + ".";
+    if (hole.dogleg) { var d = distTo(hole.dogleg); if (d !== null) msg += " Dogleg " + m2y(d) + "."; }
     speak(msg);
   }
-
-  // ===== HAVERSINE =====
-  function haversine(lat1, lng1, lat2, lng2) {
-    var R = 6371000;
-    var dLat = (lat2 - lat1) * Math.PI / 180;
-    var dLng = (lng2 - lng1) * Math.PI / 180;
-    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
-  function metersToYards(m) { return Math.round(m * 1.09361); }
-  function distTo(pt) {
-    if (!pt || playerLat === null) return null;
-    return haversine(playerLat, playerLng, pt.lat, pt.lng);
+  function speakHoleChange(hole) {
+    var dC = distTo(hole.green.center);
+    var msg = "Hole " + hole.hole + ". Par " + (hole.par || "unknown") + ".";
+    if (dC !== null) msg += " " + m2y(dC) + " yards.";
+    speak(msg);
   }
 
   // ===== HOLE DETECTION =====
   function detectHole() {
-    if (playerLat === null) return;
+    if (!activeCourse || playerLat === null) return;
     var nextIdx = currentHole + 1;
     if (nextIdx < 18) {
-      var d = distTo(holes[nextIdx].tee);
+      var d = distTo(activeCourse.holes[nextIdx].tee);
       if (d !== null && d < 40) {
         currentHole = nextIdx;
-        if (lastSpokenHole !== currentHole) {
-          lastSpokenHole = currentHole;
-          speakHoleChange(holes[currentHole]);
-        }
+        if (lastSpokenHole !== currentHole) { lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); }
       }
     }
   }
 
-  // ===== RENDER =====
-  function renderHoleDots() {
-    el.holeDots.innerHTML = "";
-    for (var i = 0; i < 18; i++) {
-      var d = document.createElement("div");
-      d.className = "hdot" + (i < currentHole ? " done" : "") + (i === currentHole ? " active" : "");
-      el.holeDots.appendChild(d);
+  // ===== HUD RENDER =====
+  function updateHUD() {
+    if (!activeCourse) return;
+    var hole = activeCourse.holes[currentHole];
+    el.holeNum.textContent = "HOLE " + hole.hole;
+    var par = hole.par ? "Par " + hole.par : "";
+    var official = "";
+    if (selectedTeeKey && activeCourse.tees && activeCourse.tees[selectedTeeKey]) {
+      var tee = activeCourse.tees[selectedTeeKey];
+      official = tee.holes[currentHole] + " yd (" + tee.label + ")";
+      el.teeBadge.innerHTML = tee.label.toUpperCase() + " TEES";
+      el.officialYd.textContent = "Official: " + tee.holes[currentHole] + " yd";
+    } else {
+      el.teeBadge.innerHTML = "";
+      el.officialYd.textContent = "";
     }
+    el.holeMeta.textContent = par + (official ? " \u00b7 " + official : "");
+    if (playerLat === null) return;
+    var dC = distTo(hole.green.center), dF = distTo(hole.green.front), dB = distTo(hole.green.back);
+    el.yardCenter.textContent = dC !== null ? m2y(dC) : "---";
+    el.yardFront.textContent = dF !== null ? m2y(dF) : "--";
+    el.yardBack.textContent = dB !== null ? m2y(dB) : "--";
+    el.extraRow.innerHTML = "";
+    if (hole.dogleg) { var dd = distTo(hole.dogleg); if (dd !== null) el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-dg"></span><span class="extra-label">Dogleg</span><span class="extra-dist">' + m2y(dd) + '</span></div>'; }
+    if (hole.layups && hole.layups.length) hole.layups.forEach(function (lp) { var dl = distTo(lp); if (dl !== null) el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-lu"></span><span class="extra-label">' + (lp.label||"Layup") + '</span><span class="extra-dist">' + m2y(dl) + '</span></div>'; });
+    var hz = hole.hazards.map(function (h) { return { label: h.label, dist: distTo(h) }; }).filter(function (h) { return h.dist!==null; }).sort(function (a,b) { return a.dist-b.dist; }).slice(0,3);
+    el.hazardList.innerHTML = "";
+    hz.forEach(function (h) { var d2 = document.createElement("div"); d2.className = "hz-row"; d2.innerHTML = '<span class="hz-dot"></span><span class="hz-name">' + h.label + '</span><span class="hz-dist">' + m2y(h.dist) + '</span>'; el.hazardList.appendChild(d2); });
+    if (gpsAcc !== null) { var cls = gpsAcc<=5?"good":gpsAcc<=15?"warn":"bad"; el.gpsStatus.textContent = "GPS: \u00b1" + gpsAcc.toFixed(0) + "m"; el.gpsStatus.className = "gps-status " + cls; }
+    renderDots();
   }
 
-  function update() {
-    var hole = holes[currentHole];
-    el.holeNum.textContent = "HOLE " + hole.hole;
-    el.holePar.textContent = "Par " + (hole.par || "\u2014");
-    if (playerLat === null) return;
-
-    var dCenter = distTo(hole.green.center);
-    var dFront = distTo(hole.green.front);
-    var dBack = distTo(hole.green.back);
-    el.yardCenter.textContent = dCenter !== null ? metersToYards(dCenter) : "---";
-    el.yardFront.textContent = dFront !== null ? metersToYards(dFront) : "--";
-    el.yardBack.textContent = dBack !== null ? metersToYards(dBack) : "--";
-
-    el.extraRow.innerHTML = "";
-    if (hole.dogleg) {
-      var dDog = distTo(hole.dogleg);
-      if (dDog !== null) el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-dg"></span><span class="extra-label">Dogleg</span><span class="extra-dist">' + metersToYards(dDog) + '</span></div>';
-    }
-    if (hole.layups && hole.layups.length) {
-      hole.layups.forEach(function (lp) {
-        var dLp = distTo(lp);
-        if (dLp !== null) el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-lu"></span><span class="extra-label">' + (lp.label || "Layup") + '</span><span class="extra-dist">' + metersToYards(dLp) + '</span></div>';
-      });
-    }
-
-    var hazards = hole.hazards.map(function (hz) { return { label: hz.label, dist: distTo(hz) }; })
-      .filter(function (h) { return h.dist !== null; }).sort(function (a, b) { return a.dist - b.dist; }).slice(0, 3);
-    el.hazardList.innerHTML = "";
-    hazards.forEach(function (hz) {
-      var div = document.createElement("div"); div.className = "hz-row";
-      div.innerHTML = '<span class="hz-dot"></span><span class="hz-name">' + hz.label + '</span><span class="hz-dist">' + metersToYards(hz.dist) + '</span>';
-      el.hazardList.appendChild(div);
-    });
-
-    if (gpsAcc !== null) {
-      var cls = gpsAcc <= 5 ? "good" : gpsAcc <= 15 ? "warn" : "bad";
-      el.gpsStatus.textContent = "GPS: \u00b1" + gpsAcc.toFixed(0) + "m";
-      el.gpsStatus.className = "gps-status " + cls;
-    }
-    renderHoleDots();
+  function renderDots() {
+    el.holeDots.innerHTML = "";
+    for (var i = 0; i < 18; i++) { var d = document.createElement("div"); d.className = "hdot" + (i < currentHole ? " done" : "") + (i === currentHole ? " active" : ""); el.holeDots.appendChild(d); }
   }
 
   // ===== GPS =====
   function onPosition(pos) {
-    playerLat = pos.coords.latitude;
-    playerLng = pos.coords.longitude;
-    gpsAcc = pos.coords.accuracy;
-
-    if (!el.loading.classList.contains("hidden")) {
-      el.loading.classList.add("hidden");
-      el.hud.classList.remove("hidden");
-      renderHoleDots();
-      var bestDist = Infinity, bestIdx = 0;
-      holes.forEach(function (h, idx) {
-        var d = distTo(h.tee);
-        if (d !== null && d < bestDist) { bestDist = d; bestIdx = idx; }
-      });
-      currentHole = bestIdx;
-      lastSpokenHole = currentHole;
-      speakHoleChange(holes[currentHole]);
+    playerLat = pos.coords.latitude; playerLng = pos.coords.longitude; gpsAcc = pos.coords.accuracy;
+    if (el.loading.style.display !== "none" && !el.loading.classList.contains("hidden")) {
+      el.loading.classList.add("hidden"); showScreen("course");
     }
     detectHole();
-    update();
+    if (currentScreen === "hud") updateHUD();
   }
-
   function onError(err) {
-    var msgs = { 1: "Location permission denied. Allow location and reload.", 2: "Position unavailable. Go outdoors.", 3: "Location timed out. Try again." };
+    var msgs = { 1:"Location permission denied. Allow location and reload.", 2:"Position unavailable. Go outdoors.", 3:"Location timed out." };
     el.loading.classList.add("hidden"); el.error.classList.remove("hidden");
-    el.errTitle.textContent = "GPS Error"; el.errMsg.textContent = msgs[err.code] || ("Error: " + err.message);
+    el.errTitle.textContent = "GPS Error"; el.errMsg.textContent = msgs[err.code] || "Error: " + err.message;
   }
+  function showError(msg) { el.screenCourse.classList.add("hidden"); el.screenTee.classList.add("hidden"); el.screenHUD.classList.add("hidden"); el.error.classList.remove("hidden"); el.errMsg.textContent = msg; }
 
   if (!("geolocation" in navigator)) {
-    el.loading.classList.add("hidden"); el.error.classList.remove("hidden");
-    el.errTitle.textContent = "No GPS"; el.errMsg.textContent = "Geolocation not available.";
+    el.loading.classList.add("hidden"); showScreen("course");
   } else {
     navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
   }
 
   // ===== CONTROLS =====
-  el.prevBtn.addEventListener("click", function () {
-    if (currentHole > 0) { currentHole--; update(); lastSpokenHole = currentHole; speakHoleChange(holes[currentHole]); }
-  });
-  el.nextBtn.addEventListener("click", function () {
-    if (currentHole < 17) { currentHole++; update(); lastSpokenHole = currentHole; speakHoleChange(holes[currentHole]); }
-  });
+  el.prevBtn.addEventListener("click", function () { if (currentHole > 0) { currentHole--; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); } });
+  el.nextBtn.addEventListener("click", function () { if (currentHole < 17) { currentHole++; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); } });
+  el.yardageTap.addEventListener("click", function () { speakHUD(); });
+  el.muteBtn.addEventListener("click", function () { voiceOn = !voiceOn; if (!voiceOn) { speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.classList.remove("on"); } else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.classList.add("on"); } });
+  el.courseBtn.addEventListener("click", function () { showScreen("course"); });
 
-  // Tap yardage for full voice update
-  el.yardageTap.addEventListener("click", function () {
-    if (!hasSpeech) { el.tapHint.textContent = "voice not supported"; return; }
-    speakFullUpdate();
-  });
-
-  // Mute toggle
-  el.muteBtn.addEventListener("click", function () {
-    voiceOn = !voiceOn;
-    if (!voiceOn) { speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.className = "mute-btn"; }
-    else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.className = "mute-btn on"; }
+  // ===== D-PAD KEYBOARD NAVIGATION (Meta requirement) =====
+  document.addEventListener("keydown", function (e) {
+    if (currentScreen === "course" || currentScreen === "tee") {
+      if (e.key === "ArrowUp") { e.preventDefault(); navList(-1); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); navList(1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectFocused(); }
+    } else if (currentScreen === "hud") {
+      if (e.key === "ArrowLeft") { e.preventDefault(); el.prevBtn.click(); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); el.nextBtn.click(); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); speakHUD(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); speakHUD(); }
+    }
   });
 
   if (!hasSpeech) { el.tapHint.textContent = "voice not available"; el.muteBtn.classList.add("hidden"); }
-
-  update(); renderHoleDots();
+  renderDots();
 })();
 </script>
 </body>
