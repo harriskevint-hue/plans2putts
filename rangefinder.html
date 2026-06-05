@@ -474,7 +474,7 @@
   el.prevBtn.addEventListener("click", function () { if (currentHole > 0) { currentHole--; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); } });
   el.nextBtn.addEventListener("click", function () { if (currentHole < 17) { currentHole++; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); } });
   el.yardageTap.addEventListener("click", function () { speakHUD(); });
-  el.muteBtn.addEventListener("click", function () { voiceOn = !voiceOn; if (!voiceOn) { speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.classList.remove("on"); } else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.classList.add("on"); } });
+  el.muteBtn.addEventListener("click", function () { voiceOn = !voiceOn; if (!voiceOn) { speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.classList.remove("on"); } else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.classList.add("on"); speakHUD(); } });
   el.courseBtn.addEventListener("click", function () { showScreen("course"); });
 
   // ===== D-PAD KEYBOARD NAVIGATION (Meta requirement) =====
