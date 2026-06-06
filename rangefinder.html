@@ -151,7 +151,7 @@
     <div class="yardage-wrap focusable" id="yardageTap" tabindex="0" aria-label="Yardage" role="button">
       <div class="yardage-label" aria-hidden="true">to center</div>
       <div class="yardage" id="yardCenter" aria-hidden="true">---</div>
-      <div class="yardage-unit" aria-hidden="true">yards</div>
+      <div class="yardage-unit" aria-hidden="true" role="presentation">yards</div>
     </div>
     <div aria-live="polite" aria-atomic="true" id="liveRegion" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
     <div class="fb-row" aria-hidden="true">
@@ -371,6 +371,8 @@
   function distTo(pt) { if (!pt || playerLat === null) return null; return haversine(playerLat, playerLng, pt.lat, pt.lng); }
 
   // ===== VOICE =====
+  var hasSpeech = ("speechSynthesis" in window);
+
   function speak(text) {
     if (!voiceOn) return;
     if (hasSpeech) {
@@ -379,7 +381,6 @@
       u.rate = 0.95;
       speechSynthesis.speak(u);
     }
-    // Also update live region for glasses screen reader
     if (el.liveRegion) { el.liveRegion.textContent = ""; setTimeout(function(){ el.liveRegion.textContent = text; }, 50); }
   }
   function speakHUD() {
@@ -525,7 +526,6 @@
     }
   });
 
-  if (!hasSpeech) { el.tapHint.textContent = "voice not available"; el.muteBtn.classList.add("hidden"); }
   el.retryBtn.addEventListener("click", function () {
     el.error.classList.add("hidden");
     el.loading.classList.remove("hidden");
