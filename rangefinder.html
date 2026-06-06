@@ -120,6 +120,7 @@
   <div id="stateError" class="screen state-msg hidden">
     <h2 id="errTitle">GPS Error</h2>
     <p id="errMsg"></p>
+    <button id="retryBtn" class="focusable" tabindex="0" style="margin-top:24px;font-family:'DM Mono',monospace;font-size:1rem;font-weight:600;background:none;border:2px solid #4ade80;color:#4ade80;border-radius:12px;padding:14px 28px;cursor:pointer;letter-spacing:0.05em;">Tap to allow location</button>
   </div>
 
   <!-- Course Selection -->
@@ -227,6 +228,7 @@
     error: document.getElementById("stateError"),
     errTitle: document.getElementById("errTitle"),
     errMsg: document.getElementById("errMsg"),
+    retryBtn: document.getElementById("retryBtn"),
     screenCourse: document.getElementById("screenCourse"),
     screenTee: document.getElementById("screenTee"),
     screenHUD: document.getElementById("screenHUD"),
@@ -492,6 +494,11 @@
   });
 
   if (!hasSpeech) { el.tapHint.textContent = "voice not available"; el.muteBtn.classList.add("hidden"); }
+  el.retryBtn.addEventListener("click", function () {
+    el.error.classList.add("hidden");
+    el.loading.classList.remove("hidden");
+    navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+  });
   renderDots();
 })();
 </script>
