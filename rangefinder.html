@@ -515,6 +515,7 @@
       var yds = m2y(dC);
       if (lastAutoYard === null || Math.abs(yds - lastAutoYard) >= 5) {
         lastAutoYard = yds;
+        showHUDDisplay();
         speakHUD();
       }
     }, 30000);
@@ -599,6 +600,11 @@
   el.strokeBar.addEventListener("click", function () { markStroke(); });
 
   // ===== D-PAD KEYBOARD NAVIGATION (Meta requirement) =====
+  // Any interaction shows the HUD — keydown, touch, or click
+  function onInteraction() { showHUDDisplay(); }
+  document.addEventListener("touchstart", onInteraction, { passive: true });
+  document.addEventListener("click", onInteraction);
+
   document.addEventListener("keydown", function (e) {
     if (currentScreen === "course" || currentScreen === "tee") {
       if (e.key === "ArrowUp") { e.preventDefault(); navList(-1); }
