@@ -239,6 +239,51 @@
   // Focus mode
   var focusTimer = null;
   var FOCUS_DELAY = 25000;
+  // Storage keys
+  var ROUND_KEY = "p2p_current_round";
+  var HISTORY_KEY = "p2p_history";
+
+  // ===== LOCAL STORAGE =====
+  function saveRound() {
+    try {
+      var state = {
+        date: new Date().toDateString(),
+        course: activeCourse ? activeCourse.course : null,
+        tee: selectedTeeKey,
+        hole: currentHole,
+        strokes: currentStrokes,
+        scores: holeScores
+      };
+      localStorage.setItem(ROUND_KEY, JSON.stringify(state));
+    } catch(e) {}
+  }
+
+  function loadSavedRound() {
+    try {
+      var raw = localStorage.getItem(ROUND_KEY);
+      if (!raw) return null;
+      var state = JSON.parse(raw);
+      if (state.date !== new Date().toDateString()) { localStorage.removeItem(ROUND_KEY); return null; }
+      return state;
+    } catch(e) { return null; }
+  }
+
+  function saveToHistory(roundData) {
+    try {
+      var history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      history.unshift(roundData);
+      if (history.length > 20) history = history.slice(0, 20);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } catch(e) {}
+  }
+
+  function clearRound() {
+    try { localStorage.removeItem(ROUND_KEY); } catch(e) {}
+    currentStrokes = 0;
+    holeScores = [];
+    for (var j = 0; j < 18; j++) holeScores.push(null);
+    lastShotLat = null; lastShotLng = null; lastCarry = null;
+  }
 
   // ===== DOM =====
   var el = {
@@ -489,7 +534,21 @@
   function onPosition(pos) {
     playerLat = pos.coords.latitude; playerLng = pos.coords.longitude; gpsAcc = pos.coords.accuracy;
     if (el.loading.style.display !== "none" && !el.loading.classList.contains("hidden")) {
-      el.loading.classList.add("hidden"); showScreen("course");
+      el.loading.classList.add("hidden");
+      // Check for saved round from today
+      var saved = loadSavedRound();
+      if (saved && COURSES[saved.course ? "white-horse" : "white-horse"]) {
+        activeCourse = COURSES["white-horse"];
+        selectedTeeKey = saved.tee;
+        currentHole = saved.hole || 0;
+        currentStrokes = saved.strokes || 0;
+        holeScores = saved.scores || holeScores;
+        el.strokeNum.textContent = currentStrokes;
+        showScreen("hud");
+        speak("Round resumed. Hole " + (currentHole + 1) + ". " + currentStrokes + " strokes this hole.");
+      } else {
+        showScreen("course");
+      }
     }
     detectHole();
     if (currentScreen === "hud") updateHUD();
@@ -543,6 +602,7 @@
     var msg = "Shot " + currentStrokes + " marked." + (carryText ? " " + carryText + "." : "");
     speak(msg);
     showHUDDisplay();
+    saveRound();
   }
 
   function scoreWord(diff) {
@@ -567,6 +627,17 @@
     var totalDiff = total - totalPar;
     var msg = "Hole " + hole.hole + " complete. " + currentStrokes + " strokes. " + scoreWord(diff) + ".";
     if (currentHole === 17) {
+      var roundData = {
+        date: new Date().toLocaleDateString(),
+        course: activeCourse.course,
+        tee: selectedTeeKey,
+        scores: holeScores.slice(),
+        total: total,
+        par: totalPar,
+        diff: totalDiff
+      };
+      saveToHistory(roundData);
+      localStorage.removeItem(ROUND_KEY);
       msg += " Round complete. " + total + " total. " + (totalDiff >= 0 ? totalDiff + " over" : Math.abs(totalDiff) + " under") + " par.";
     } else {
       msg += " Total: " + total + " through " + scored.length + " holes.";
@@ -575,6 +646,7 @@
     currentStrokes = 0; lastShotLat = null; lastShotLng = null; lastCarry = null;
     el.strokeNum.textContent = 0; el.strokeCarry.textContent = "";
     el.strokeBar.setAttribute("aria-label", "0 strokes");
+    saveRound();
   }
 
   // ===== FOCUS MODE =====
@@ -596,7 +668,7 @@
   });
   el.yardageTap.addEventListener("click", function () { speakHUD(); showHUDDisplay(); });
   el.muteBtn.addEventListener("click", function () { voiceOn = !voiceOn; if (!voiceOn) { if (hasSpeech) speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.classList.remove("on"); } else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.classList.add("on"); speakHUD(); } showHUDDisplay(); });
-  el.courseBtn.addEventListener("click", function () { showScreen("course"); });
+  el.courseBtn.addEventListener("click", function () { clearRound(); showScreen("course"); });
   el.strokeBar.addEventListener("click", function () { markStroke(); });
 
   // ===== D-PAD KEYBOARD NAVIGATION (Meta requirement) =====
