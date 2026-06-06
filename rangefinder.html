@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Plans2Putts</title>
+<title>ShadesCaddie</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --bg: #000000;
@@ -63,6 +64,38 @@
   .stroke-num { font-family: 'Anton', sans-serif; font-size: 2.2rem; color: var(--amber); display: block; line-height: 1; }
   .stroke-carry { font-size: 0.65rem; color: var(--dim); letter-spacing: 0.08em; }
   #screenHUD.focus-mode { background: transparent; }
+
+  /* ===== CLUB OVERLAY ===== */
+  .club-overlay { position: absolute; bottom: 56px; left: 0; right: 0; background: rgba(0,0,0,0.95); border-top: 2px solid var(--green); padding: 10px 16px; text-align: center; z-index: 50; }
+  .club-prompt { font-size: 0.58rem; letter-spacing: 0.2em; color: var(--green); text-transform: uppercase; margin-bottom: 4px; }
+  .club-name { font-family: 'Anton', sans-serif; font-size: 1.8rem; color: var(--primary); line-height: 1; }
+  .club-hint-sm { font-size: 0.55rem; color: var(--dim); letter-spacing: 0.08em; margin-top: 4px; }
+
+  /* ===== SCORECARD OVERLAY ===== */
+  .scorecard-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.97); display: flex; flex-direction: column; align-items: center; padding: 14px 10px; z-index: 100; }
+  .sc-title { font-family: 'Anton', sans-serif; font-size: 1.1rem; color: var(--green); letter-spacing: 0.15em; margin-bottom: 3px; }
+  .sc-course-name { font-size: 0.6rem; color: var(--dim); letter-spacing: 0.05em; margin-bottom: 10px; }
+  .sc-half { width: 100%; margin-bottom: 8px; }
+  .sc-half-label { font-size: 0.55rem; color: var(--dim); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px; }
+  .sc-cells { display: flex; gap: 3px; width: 100%; }
+  .sc-cell { flex: 1; text-align: center; padding: 4px 1px; border-radius: 4px; background: var(--dim2); }
+  .sc-cell .sc-h { font-size: 0.48rem; color: var(--dim); }
+  .sc-cell .sc-s { font-family: 'Anton', sans-serif; font-size: 0.9rem; color: var(--dim); }
+  .sc-cell.played .sc-s { color: var(--primary); }
+  .sc-cell.eagle { background: #4c1d95; } .sc-cell.eagle .sc-s { color: #c4b5fd; }
+  .sc-cell.birdie { background: #14532d; } .sc-cell.birdie .sc-s { color: var(--green); }
+  .sc-cell.bogey { background: #78350f; } .sc-cell.bogey .sc-s { color: var(--amber); }
+  .sc-cell.double { background: #7f1d1d; } .sc-cell.double .sc-s { color: var(--red); }
+  .sc-cell.over { background: #7f1d1d; } .sc-cell.over .sc-s { color: var(--red); }
+  .sc-active { outline: 2px solid var(--green); }
+  .sc-total-row { font-size: 0.85rem; color: var(--primary); margin-top: 6px; text-align: center; }
+  .sc-total-row strong { font-family: 'Anton', sans-serif; font-size: 1.4rem; color: var(--amber); }
+  .sc-close-hint { font-size: 0.55rem; color: var(--dim2); margin-top: 8px; letter-spacing: 0.08em; }
+  .sc-actions { display: flex; gap: 10px; margin-top: 12px; justify-content: center; }
+  .sc-btn { font-family: 'DM Mono', monospace; font-size: 0.72rem; font-weight: 500; padding: 10px 18px; border-radius: 10px; cursor: pointer; letter-spacing: 0.05em; border: 2px solid; }
+  .sc-btn-pdf { background: var(--green); border-color: var(--green); color: #000; }
+  .sc-btn-copy { background: transparent; border-color: var(--dim); color: var(--dim); }
+  .sc-btn-copy.copied { border-color: var(--green); color: var(--green); }
   .tee-badge { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--dim2); text-transform: uppercase; }
   .tee-badge span { color: var(--amber); }
   .hole-bar { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: center; }
@@ -175,7 +208,33 @@
     <div class="bottom-bar">
       <button class="icon-btn focusable" id="courseBtn" tabindex="0" title="Change course">&#127922;</button>
       <div class="gps-status" id="gpsStatus">GPS: acquiring...</div>
+      <button class="icon-btn focusable" id="cardBtn" tabindex="0" title="Scorecard">&#128203;</button>
       <button class="icon-btn on focusable" id="muteBtn" tabindex="0" title="Toggle voice">&#x1f50a;</button>
+    </div>
+    <!-- Club Tag Overlay -->
+    <div id="clubOverlay" class="club-overlay hidden">
+      <div class="club-prompt">Tag Club</div>
+      <div class="club-name" id="clubName">7 Iron</div>
+      <div class="club-hint-sm">&#x2191;&#x2193; change &nbsp;&middot;&nbsp; Enter save &nbsp;&middot;&nbsp; &#x2190; skip</div>
+    </div>
+    <!-- Scorecard Overlay -->
+    <div id="scorecardOverlay" class="scorecard-overlay hidden">
+      <div class="sc-title">SCORECARD</div>
+      <div class="sc-course-name" id="scCourseName"></div>
+      <div class="sc-half">
+        <div class="sc-half-label">Front 9</div>
+        <div class="sc-cells" id="scFront"></div>
+      </div>
+      <div class="sc-half">
+        <div class="sc-half-label">Back 9</div>
+        <div class="sc-cells" id="scBack"></div>
+      </div>
+      <div class="sc-total-row" id="scTotal"></div>
+      <div class="sc-actions">
+        <button class="sc-btn sc-btn-pdf" id="scDownloadBtn">&#x2913; Download PDF</button>
+        <button class="sc-btn sc-btn-copy" id="scCopyBtn">&#128203; Copy</button>
+      </div>
+      <div class="sc-close-hint">Any gesture to close</div>
     </div>
   </div>
 
@@ -218,8 +277,33 @@
   };
 
   var AVAILABLE_COURSES = [
-    { key: "white-horse", name: "White Horse Golf Club", holes: 18, sub: "Kingston, WA" }
-    // Add friends' courses here: { key: "friend-course", name: "...", holes: 18, sub: "City, ST", url: "https://..." }
+    { key: "white-horse", name: "White Horse Golf Club", holes: 18, sub: "Kingston, WA" },
+    { key: "army-navy-blue-red", name: "Army Navy Blue/Red", holes: 18, sub: "Fairfax, VA",
+      url: "https://harriskevint-hue.github.io/plans2putts/courses/army-navy-blue-red.json",
+      tees: {
+        black: { label: "Black", total: 6644, holes: [353,293,155,524,212,560,477,412,340,356,396,412,192,388,486,531,151,406] },
+        blue:  { label: "Blue",  total: 6290, holes: [348,273,137,506,200,550,443,406,319,350,388,375,163,360,460,501,139,372] },
+        white: { label: "White", total: 5866, holes: [320,261,126,472,174,511,410,377,314,332,360,337,137,309,434,496,131,365] },
+        red:   { label: "Red",   total: 5293, holes: [301,247,103,438,132,460,365,284,267,330,369,274,113,320,410,435,132,313] }
+      }
+    },
+    { key: "army-navy-red-white", name: "Army Navy Red/White", holes: 18, sub: "Fairfax, VA",
+      url: "https://harriskevint-hue.github.io/plans2putts/courses/army-navy-red-white.json",
+      tees: {
+        blue:  { label: "Blue",  total: 6435, holes: [355,394,414,163,360,460,501,167,416,406,318,349,383,157,470,428,375,319] },
+        white: { label: "White", total: 5864, holes: [332,360,337,137,309,434,496,131,365,331,135,464,480,132,381,393,354,293] },
+        red:   { label: "Red",   total: 5446, holes: [330,369,274,117,320,410,435,132,313,332,131,439,426,98,329,346,344,301] }
+      }
+    },
+    { key: "army-navy-white-blue", name: "Army Navy White/Blue", holes: 18, sub: "Fairfax, VA",
+      url: "https://harriskevint-hue.github.io/plans2putts/courses/army-navy-white-blue.json",
+      tees: {
+        black: { label: "Black", total: 6594, holes: [364,160,500,514,152,414,457,396,311,353,293,155,524,212,560,477,412,340] },
+        blue:  { label: "Blue",  total: 6328, holes: [358,154,470,508,140,408,428,375,305,348,273,137,506,200,550,443,406,319] },
+        white: { label: "White", total: 5928, holes: [331,135,464,480,132,381,393,354,293,320,261,126,472,174,511,410,377,314] },
+        red:   { label: "Red",   total: 5386, holes: [332,131,439,426,98,329,389,344,301,301,247,103,438,132,460,365,284,267] }
+      }
+    }
   ];
 
   // ===== STATE =====
@@ -232,10 +316,15 @@
   var currentScreen = "course";
   var listFocusIdx = 0;
   // Stroke tracking
+  var CLUBS = ["Driver","3 Wood","5 Wood","Hybrid","4 Iron","5 Iron","6 Iron","7 Iron","8 Iron","9 Iron","Pitching W","Gap W","Sand W","Lob W","Putter"];
+  var shots = []; // { hole, num, lat, lng, carry, club }
   var currentStrokes = 0;
   var holeScores = [];
   for (var i = 0; i < 18; i++) holeScores.push(null);
-  var lastShotLat = null, lastShotLng = null, lastCarry = null;
+  var lastCarry = null;
+  var lastClubIdx = 7; // default: 7 Iron
+  var clubSelecting = false;
+  var clubIdx = 7;
   // Focus mode
   var focusTimer = null;
   var FOCUS_DELAY = 25000;
@@ -252,7 +341,8 @@
         tee: selectedTeeKey,
         hole: currentHole,
         strokes: currentStrokes,
-        scores: holeScores
+        scores: holeScores,
+        shots: shots
       };
       localStorage.setItem(ROUND_KEY, JSON.stringify(state));
     } catch(e) {}
@@ -279,10 +369,11 @@
 
   function clearRound() {
     try { localStorage.removeItem(ROUND_KEY); } catch(e) {}
-    currentStrokes = 0;
+    currentStrokes = 0; shots = [];
     holeScores = [];
     for (var j = 0; j < 18; j++) holeScores.push(null);
-    lastShotLat = null; lastShotLng = null; lastCarry = null;
+    lastCarry = null;
+    el.strokeNum.textContent = 0; el.strokeCarry.textContent = "";
   }
 
   // ===== DOM =====
@@ -315,6 +406,15 @@
     strokeBar: document.getElementById("strokeBar"),
     strokeNum: document.getElementById("strokeNum"),
     strokeCarry: document.getElementById("strokeCarry"),
+    clubOverlay: document.getElementById("clubOverlay"),
+    clubName: document.getElementById("clubName"),
+    scorecardOverlay: document.getElementById("scorecardOverlay"),
+    scCourseName: document.getElementById("scCourseName"),
+    scFront: document.getElementById("scFront"),
+    scBack: document.getElementById("scBack"),
+    scTotal: document.getElementById("scTotal"),
+    scDownloadBtn: document.getElementById("scDownloadBtn"),
+    scCopyBtn: document.getElementById("scCopyBtn"),
     muteBtn: document.getElementById("muteBtn"),
     courseBtn: document.getElementById("courseBtn")
   };
@@ -365,7 +465,11 @@
   }
 
   function activateCourse(key) {
+    var courseDef = null;
+    for (var i = 0; i < AVAILABLE_COURSES.length; i++) { if (AVAILABLE_COURSES[i].key === key) { courseDef = AVAILABLE_COURSES[i]; break; } }
     activeCourse = COURSES[key];
+    // Merge tees from course definition if not in the loaded data
+    if (courseDef && courseDef.tees && !activeCourse.tees) activeCourse.tees = courseDef.tees;
     if (activeCourse.tees) { showScreen("tee"); }
     else { selectedTeeKey = null; showScreen("hud"); speak("Starting round at " + activeCourse.course); }
   }
@@ -543,6 +647,7 @@
         currentHole = saved.hole || 0;
         currentStrokes = saved.strokes || 0;
         holeScores = saved.scores || holeScores;
+        shots = saved.shots || [];
         el.strokeNum.textContent = currentStrokes;
         showScreen("hud");
         speak("Round resumed. Hole " + (currentHole + 1) + ". " + currentStrokes + " strokes this hole.");
@@ -589,21 +694,215 @@
   // ===== STROKE TRACKING =====
   function markStroke() {
     currentStrokes++;
-    var carryText = "";
-    if (lastShotLat !== null && playerLat !== null) {
-      var d = haversine(lastShotLat, lastShotLng, playerLat, playerLng);
-      lastCarry = m2y(d);
-      carryText = lastCarry + " yd carry";
-      el.strokeCarry.textContent = carryText;
+    var carry = null;
+    if (shots.length > 0 && playerLat !== null) {
+      var prev = shots[shots.length - 1];
+      carry = m2y(haversine(prev.lat, prev.lng, playerLat, playerLng));
+      lastCarry = carry;
+      el.strokeCarry.textContent = carry + " yd carry";
     }
-    lastShotLat = playerLat; lastShotLng = playerLng;
+    shots.push({ hole: currentHole, num: currentStrokes, lat: playerLat, lng: playerLng, carry: carry, club: null });
     el.strokeNum.textContent = currentStrokes;
-    el.strokeBar.setAttribute("aria-label", currentStrokes + " strokes" + (carryText ? ". Last shot " + carryText : ""));
-    var msg = "Shot " + currentStrokes + " marked." + (carryText ? " " + carryText + "." : "");
-    speak(msg);
+    var carryText = carry ? carry + " yd carry" : "";
+    el.strokeBar.setAttribute("aria-label", currentStrokes + " strokes" + (carryText ? ". " + carryText : ""));
+    speak("Shot " + currentStrokes + "." + (carryText ? " " + carryText + "." : ""));
     showHUDDisplay();
     saveRound();
+    clubIdx = lastClubIdx;
+    showClubOverlay();
   }
+
+  function undoStroke() {
+    if (currentStrokes === 0) { speak("No strokes to remove."); return; }
+    shots.pop();
+    currentStrokes--;
+    el.strokeNum.textContent = currentStrokes;
+    if (shots.length > 0 && shots[shots.length-1].carry) {
+      el.strokeCarry.textContent = shots[shots.length-1].carry + " yd carry";
+    } else { el.strokeCarry.textContent = ""; }
+    el.strokeBar.setAttribute("aria-label", currentStrokes + " strokes");
+    speak("Stroke removed. " + currentStrokes + " strokes.");
+    showHUDDisplay(); saveRound();
+  }
+
+  // ===== CLUB OVERLAY =====
+  function showClubOverlay() {
+    clubSelecting = true;
+    el.clubName.textContent = CLUBS[clubIdx];
+    el.clubOverlay.classList.remove("hidden");
+  }
+  function navClub(dir) {
+    clubIdx = Math.max(0, Math.min(CLUBS.length - 1, clubIdx + dir));
+    el.clubName.textContent = CLUBS[clubIdx];
+    speak(CLUBS[clubIdx]);
+  }
+  function confirmClub() {
+    if (shots.length > 0) { shots[shots.length-1].club = CLUBS[clubIdx]; lastClubIdx = clubIdx; }
+    hideClubOverlay(); speak(CLUBS[clubIdx] + " saved."); saveRound();
+  }
+  function skipClub() { hideClubOverlay(); }
+  function hideClubOverlay() { clubSelecting = false; el.clubOverlay.classList.add("hidden"); }
+
+  // ===== SCORECARD =====
+  function showScorecard() {
+    if (!activeCourse) return;
+    el.scCourseName.textContent = activeCourse.course;
+    function buildHalf(container, start) {
+      container.innerHTML = "";
+      for (var i = start; i < start + 9; i++) {
+        var hole = activeCourse.holes[i];
+        var score = holeScores[i];
+        var par = hole.par || 4;
+        var cell = document.createElement("div");
+        cell.className = "sc-cell" + (score !== null ? " played" : "") + (i === currentHole ? " sc-active" : "");
+        if (score !== null) {
+          var diff = score - par;
+          if (diff <= -2) cell.classList.add("eagle");
+          else if (diff === -1) cell.classList.add("birdie");
+          else if (diff === 0) cell.classList.add("par");
+          else if (diff === 1) cell.classList.add("bogey");
+          else if (diff === 2) cell.classList.add("double");
+          else if (diff > 2) cell.classList.add("over");
+        }
+        cell.innerHTML = '<div class="sc-h">' + hole.hole + '</div><div class="sc-s">' + (score !== null ? score : "\u2013") + '</div>';
+        container.appendChild(cell);
+      }
+    }
+    buildHalf(el.scFront, 0);
+    buildHalf(el.scBack, 9);
+    var scored = holeScores.filter(function(s){ return s !== null; });
+    var total = scored.reduce(function(a,b){return a+b;}, 0);
+    var totalPar = 0;
+    holeScores.forEach(function(s,i){ if (s !== null && activeCourse.holes[i].par) totalPar += activeCourse.holes[i].par; });
+    var diff = total - totalPar;
+    if (scored.length > 0) {
+      el.scTotal.innerHTML = 'Total <strong>' + total + '</strong> &nbsp;' + (diff > 0 ? "+" + diff : diff < 0 ? diff : "E") + ' par &nbsp;\u00b7&nbsp; ' + scored.length + ' holes';
+    } else { el.scTotal.textContent = "No holes completed yet"; }
+    el.scorecardOverlay.classList.remove("hidden");
+    setTimeout(hideScorecard, 30000);
+  }
+  function generatePDF() {
+    if (!activeCourse) return;
+    var jsPDF = window.jspdf ? window.jspdf.jsPDF : null;
+    if (!jsPDF) { alert("PDF library not loaded. Try copying instead."); return; }
+    var doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    var margin = 15; var y = 20;
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22); doc.setTextColor(74, 222, 128);
+    doc.text("ShadesCaddie", margin, y); y += 8;
+    doc.setFontSize(11); doc.setTextColor(180, 180, 180);
+    doc.text("Round Scorecard", margin, y); y += 10;
+    // Round info
+    doc.setFontSize(10); doc.setTextColor(255, 255, 255);
+    doc.setFillColor(30, 30, 30);
+    doc.roundedRect(margin, y, 180, 18, 3, 3, "F");
+    doc.setFont("helvetica", "normal");
+    var teeLabel = selectedTeeKey && activeCourse.tees ? activeCourse.tees[selectedTeeKey].label + " Tees (" + activeCourse.tees[selectedTeeKey].total.toLocaleString() + " yd)" : "GPS Only";
+    doc.text("Course: " + activeCourse.course, margin + 4, y + 6);
+    doc.text("Date: " + new Date().toLocaleDateString(), margin + 4, y + 12);
+    doc.text("Tees: " + teeLabel, margin + 100, y + 6); y += 24;
+    // Table header
+    var cols = [12, 28, 28, 28, 28, 28, 28, 28, 28, 28, 30];
+    var colX = [margin];
+    cols.forEach(function(w, i) { if (i < cols.length - 1) colX.push(colX[i] + w); });
+    var headers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "OUT"];
+    function drawRow(cells, fillColor, textColor, bold) {
+      doc.setFillColor.apply(doc, fillColor);
+      doc.rect(margin, y, 180, 8, "F");
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      doc.setFontSize(9); doc.setTextColor.apply(doc, textColor);
+      cells.forEach(function(c, i) { doc.text(String(c), colX[i] + cols[i] / 2, y + 5.5, { align: "center" }); });
+      y += 8;
+    }
+    function buildNine(label, start) {
+      var hNums = [label]; var pars = ["Par"]; var scores = ["Score"]; var diffs = ["+/-"];
+      var totalPar = 0; var totalScore = 0; var allScored = true;
+      for (var i = start; i < start + 9; i++) {
+        var h = activeCourse.holes[i]; var s = holeScores[i];
+        hNums.push(h.hole); pars.push(h.par || "-");
+        if (s !== null) { scores.push(s); totalScore += s; totalPar += (h.par || 0); var d = s - (h.par||0); diffs.push(d > 0 ? "+" + d : d < 0 ? d : "E"); }
+        else { scores.push("-"); diffs.push("-"); allScored = false; }
+      }
+      hNums.push(""); pars.push(totalPar); scores.push(allScored ? totalScore : "-"); diffs.push(allScored ? (totalScore - totalPar > 0 ? "+" + (totalScore - totalPar) : totalScore - totalPar < 0 ? (totalScore - totalPar) : "E") : "-");
+      drawRow(hNums, [40, 40, 40], [150, 150, 150], true);
+      drawRow(pars, [25, 25, 25], [200, 200, 200], false);
+      drawRow(scores, [15, 15, 15], [255, 255, 255], true);
+    }
+    // Back 9 headers
+    var backHeaders = ["", "10", "11", "12", "13", "14", "15", "16", "17", "18", "IN"];
+    buildNine("FRONT", 0); y += 4;
+    headers = backHeaders;
+    buildNine("BACK", 9); y += 4;
+    // Totals
+    var scored = holeScores.filter(function(s){ return s !== null; });
+    var total = scored.reduce(function(a,b){return a+b;},0);
+    var tPar = 0; holeScores.forEach(function(s,i){ if (s !== null && activeCourse.holes[i].par) tPar += activeCourse.holes[i].par; });
+    var diff = total - tPar;
+    doc.setFillColor(74, 222, 128); doc.rect(margin, y, 180, 10, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
+    doc.text("TOTAL: " + total + " (" + (diff > 0 ? "+" + diff : diff < 0 ? diff : "Even") + " par) through " + scored.length + " holes", margin + 4, y + 7);
+    y += 16;
+    // Club summary
+    var clubUsed = shots.filter(function(s){ return s.club; });
+    if (clubUsed.length > 0) {
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(74, 222, 128);
+      doc.text("Club Carries", margin, y); y += 6;
+      var clubMap = {};
+      clubUsed.forEach(function(s) {
+        if (s.carry) { if (!clubMap[s.club]) clubMap[s.club] = []; clubMap[s.club].push(s.carry); }
+      });
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(220, 220, 220);
+      Object.keys(clubMap).forEach(function(club) {
+        var carries = clubMap[club]; var avg = Math.round(carries.reduce(function(a,b){return a+b;},0) / carries.length);
+        doc.text(club + ": avg " + avg + " yd (" + carries.length + " shots)", margin, y); y += 5;
+      });
+    }
+    // Footer
+    y += 8;
+    doc.setFont("helvetica", "italic"); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+    doc.text("Generated by ShadesCaddie — ShadeCaddie.com", margin, y);
+    var date = new Date().toISOString().split("T")[0];
+    doc.save("ShadesCaddie-Round-" + date + ".pdf");
+  }
+
+  function copySummaryText() {
+    if (!activeCourse) return;
+    var lines = ["ShadesCaddie Round Summary", "=".repeat(30)];
+    lines.push("Course: " + activeCourse.course);
+    lines.push("Date: " + new Date().toLocaleDateString());
+    if (selectedTeeKey && activeCourse.tees) lines.push("Tees: " + activeCourse.tees[selectedTeeKey].label);
+    lines.push("");
+    lines.push("HOLE  PAR  SCORE  +/-");
+    lines.push("-".repeat(25));
+    var scored = holeScores.filter(function(s){return s!==null;});
+    var total = 0; var totalPar = 0;
+    holeScores.forEach(function(s, i) {
+      if (s !== null) {
+        var h = activeCourse.holes[i]; var par = h.par || 4; var diff = s - par;
+        total += s; totalPar += par;
+        lines.push("  " + String(h.hole).padStart(2) + "    " + par + "     " + s + "     " + (diff > 0 ? "+" + diff : diff < 0 ? diff : "E"));
+      }
+    });
+    lines.push("-".repeat(25));
+    var totalDiff = total - totalPar;
+    lines.push("TOTAL " + totalPar + "    " + total + "    " + (totalDiff > 0 ? "+" + totalDiff : totalDiff < 0 ? totalDiff : "E"));
+    lines.push("Holes played: " + scored.length);
+    var text = lines.join("\n");
+    navigator.clipboard.writeText(text).then(function() {
+      el.scCopyBtn.textContent = "\u2713 Copied!";
+      el.scCopyBtn.classList.add("copied");
+      setTimeout(function() { el.scCopyBtn.textContent = "\uD83D\uDCCB Copy"; el.scCopyBtn.classList.remove("copied"); }, 2000);
+    }).catch(function() {
+      var ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+      el.scCopyBtn.textContent = "\u2713 Copied!";
+      setTimeout(function() { el.scCopyBtn.textContent = "\uD83D\uDCCB Copy"; }, 2000);
+    });
+  }
+
+  function hideScorecard() { el.scorecardOverlay.classList.add("hidden"); }
 
   function scoreWord(diff) {
     if (diff === 0) return "even par";
@@ -639,6 +938,7 @@
       saveToHistory(roundData);
       localStorage.removeItem(ROUND_KEY);
       msg += " Round complete. " + total + " total. " + (totalDiff >= 0 ? totalDiff + " over" : Math.abs(totalDiff) + " under") + " par.";
+      setTimeout(showScorecard, 2000);
     } else {
       msg += " Total: " + total + " through " + scored.length + " holes.";
     }
@@ -670,6 +970,9 @@
   el.muteBtn.addEventListener("click", function () { voiceOn = !voiceOn; if (!voiceOn) { if (hasSpeech) speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.classList.remove("on"); } else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.classList.add("on"); speakHUD(); } showHUDDisplay(); });
   el.courseBtn.addEventListener("click", function () { clearRound(); showScreen("course"); });
   el.strokeBar.addEventListener("click", function () { markStroke(); });
+  document.getElementById("cardBtn").addEventListener("click", function () { showScorecard(); });
+  el.scDownloadBtn.addEventListener("click", function (e) { e.stopPropagation(); generatePDF(); });
+  el.scCopyBtn.addEventListener("click", function (e) { e.stopPropagation(); copySummaryText(); });
 
   // ===== D-PAD KEYBOARD NAVIGATION (Meta requirement) =====
   // Any interaction shows the HUD — keydown, touch, or click
@@ -678,6 +981,18 @@
   document.addEventListener("click", onInteraction);
 
   document.addEventListener("keydown", function (e) {
+    // Club selection mode takes priority
+    if (clubSelecting) {
+      if (e.key === "ArrowUp") { e.preventDefault(); navClub(-1); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); navClub(1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); confirmClub(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); skipClub(); }
+      return;
+    }
+    // Scorecard dismissal
+    if (!el.scorecardOverlay.classList.contains("hidden")) {
+      hideScorecard(); return;
+    }
     if (currentScreen === "course" || currentScreen === "tee") {
       if (e.key === "ArrowUp") { e.preventDefault(); navList(-1); }
       else if (e.key === "ArrowDown") { e.preventDefault(); navList(1); }
@@ -688,7 +1003,7 @@
       else if (e.key === "ArrowRight") { e.preventDefault(); el.nextBtn.click(); }
       else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); speakHUD(); }
       else if (e.key === "ArrowUp") { e.preventDefault(); markStroke(); }
-      else if (e.key === "ArrowDown") { e.preventDefault(); speakHUD(); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); undoStroke(); }
     }
   });
 
