@@ -261,7 +261,10 @@
     el.screenCourse.classList.add("hidden");
     el.screenTee.classList.add("hidden");
     el.screenHUD.classList.add("hidden");
-    if (name === "course") { el.screenCourse.classList.remove("hidden"); buildCourseList(); }
+    if (name === "course") {
+      if (AVAILABLE_COURSES.length === 1) { activateCourse(AVAILABLE_COURSES[0].key); return; }
+      el.screenCourse.classList.remove("hidden"); buildCourseList();
+    }
     else if (name === "tee") { el.screenTee.classList.remove("hidden"); buildTeeList(); }
     else if (name === "hud") { el.screenHUD.classList.remove("hidden"); updateHUD(); }
   }
@@ -307,14 +310,13 @@
     listFocusIdx = 0;
     var tees = activeCourse.tees;
     var keys = Object.keys(tees);
-    // Add "Skip" option first
     var skipBtn = document.createElement("button");
-    skipBtn.className = "nav-item focusable focused";
+    skipBtn.className = "nav-item focusable";
     skipBtn.tabIndex = 0;
     skipBtn.innerHTML = '<span>GPS Distance Only</span><span class="nav-sub">no official yardage</span>';
     skipBtn.onclick = function () { selectedTeeKey = null; showScreen("hud"); speak("Starting round. GPS only."); };
     el.teeList.appendChild(skipBtn);
-    keys.forEach(function (key, idx) {
+    keys.forEach(function (key) {
       var t = tees[key];
       var btn = document.createElement("button");
       btn.className = "nav-item focusable";
@@ -323,8 +325,7 @@
       btn.onclick = (function (k) { return function () { selectedTeeKey = k; showScreen("hud"); speak(tees[k].label + " tees selected."); }; })(key);
       el.teeList.appendChild(btn);
     });
-    focusList("teeList", 0);
-    speak("Select your tees.");
+    setTimeout(function () { focusList("teeList", 0); speak("Select your tees. Blue tees, 6197 yards."); }, 100);
   }
 
   // ===== LIST KEYBOARD NAV =====
