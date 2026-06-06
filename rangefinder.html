@@ -141,20 +141,20 @@
   <div id="screenHUD" class="screen hidden">
     <div class="tee-badge" id="teeBadge"></div>
     <div class="hole-bar">
-      <button class="focusable" id="prevBtn" tabindex="0">&#8249;</button>
-      <div class="hole-info">
+      <button class="focusable" id="prevBtn" tabindex="0" aria-label="Previous hole">&#8249;</button>
+      <div class="hole-info" role="heading" aria-level="1">
         <div class="hole-num" id="holeNum">HOLE 1</div>
         <div class="hole-meta" id="holeMeta">Par 4</div>
       </div>
-      <button class="focusable" id="nextBtn" tabindex="0">&#8250;</button>
+      <button class="focusable" id="nextBtn" tabindex="0" aria-label="Next hole">&#8250;</button>
     </div>
-    <div class="yardage-wrap focusable" id="yardageTap" tabindex="0">
-      <div class="yardage-label">to center</div>
-      <div class="yardage" id="yardCenter">---</div>
-      <div class="yardage-unit">yards</div>
-      <div class="tap-hint" id="tapHint">Enter or tap for voice</div>
+    <div class="yardage-wrap focusable" id="yardageTap" tabindex="0" aria-label="Yardage" role="button">
+      <div class="yardage-label" aria-hidden="true">to center</div>
+      <div class="yardage" id="yardCenter" aria-hidden="true">---</div>
+      <div class="yardage-unit" aria-hidden="true">yards</div>
     </div>
-    <div class="fb-row">
+    <div aria-live="polite" aria-atomic="true" id="liveRegion" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
+    <div class="fb-row" aria-hidden="true">
       <div class="fb-item"><div class="fb-label">Front</div><div class="fb-val" id="yardFront">--</div></div>
       <div class="fb-item"><div class="fb-label">Back</div><div class="fb-val" id="yardBack">--</div></div>
     </div>
@@ -248,7 +248,7 @@
     prevBtn: document.getElementById("prevBtn"),
     nextBtn: document.getElementById("nextBtn"),
     yardageTap: document.getElementById("yardageTap"),
-    tapHint: document.getElementById("tapHint"),
+    liveRegion: document.getElementById("liveRegion"),
     muteBtn: document.getElementById("muteBtn"),
     courseBtn: document.getElementById("courseBtn")
   };
@@ -266,7 +266,7 @@
       el.screenCourse.classList.remove("hidden"); buildCourseList();
     }
     else if (name === "tee") { el.screenTee.classList.remove("hidden"); buildTeeList(); }
-    else if (name === "hud") { el.screenHUD.classList.remove("hidden"); updateHUD(); }
+    else if (name === "hud") { el.screenHUD.classList.remove("hidden"); updateHUD(); setTimeout(speakHUD, 800); }
   }
 
   // ===== COURSE SELECTION =====
@@ -371,15 +371,16 @@
   function distTo(pt) { if (!pt || playerLat === null) return null; return haversine(playerLat, playerLng, pt.lat, pt.lng); }
 
   // ===== VOICE =====
-  var hasSpeech = "speechSynthesis" in window;
   function speak(text) {
-    if (!hasSpeech || !voiceOn) return;
-    speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(text);
-    u.rate = 0.95;
-    u.onstart = function () { el.tapHint.textContent = "speaking..."; el.tapHint.className = "tap-hint speaking"; };
-    u.onend = function () { el.tapHint.textContent = "Enter or tap for voice"; el.tapHint.className = "tap-hint"; };
-    speechSynthesis.speak(u);
+    if (!voiceOn) return;
+    if (hasSpeech) {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.95;
+      speechSynthesis.speak(u);
+    }
+    // Also update live region for glasses screen reader
+    if (el.liveRegion) { el.liveRegion.textContent = ""; setTimeout(function(){ el.liveRegion.textContent = text; }, 50); }
   }
   function speakHUD() {
     if (!activeCourse) return;
@@ -443,6 +444,17 @@
     el.hazardList.innerHTML = "";
     hz.forEach(function (h) { var d2 = document.createElement("div"); d2.className = "hz-row"; d2.innerHTML = '<span class="hz-dot"></span><span class="hz-name">' + h.label + '</span><span class="hz-dist">' + m2y(h.dist) + '</span>'; el.hazardList.appendChild(d2); });
     if (gpsAcc !== null) { var cls = gpsAcc<=5?"good":gpsAcc<=15?"warn":"bad"; el.gpsStatus.textContent = "GPS: \u00b1" + gpsAcc.toFixed(0) + "m"; el.gpsStatus.className = "gps-status " + cls; }
+
+    // ARIA labels for glasses screen reader
+    var holeLabel = "Hole " + hole.hole + ". Par " + (hole.par || "") + ".";
+    el.prevBtn.setAttribute("aria-label", "Previous hole. " + holeLabel);
+    el.nextBtn.setAttribute("aria-label", "Next hole");
+    var centerText = dC !== null ? m2y(dC) + " yards to center" : "acquiring";
+    var frontText = dF !== null ? "Front " + m2y(dF) : "";
+    var backText = dB !== null ? "Back " + m2y(dB) : "";
+    var yardageLabel = holeLabel + " " + centerText + ". " + frontText + ". " + backText + ".";
+    el.yardageTap.setAttribute("aria-label", yardageLabel);
+
     renderDots();
   }
 
@@ -466,6 +478,25 @@
     el.errTitle.textContent = "GPS Error"; el.errMsg.textContent = msgs[err.code] || "Error: " + err.message;
   }
   function showError(msg) { el.screenCourse.classList.add("hidden"); el.screenTee.classList.add("hidden"); el.screenHUD.classList.add("hidden"); el.error.classList.remove("hidden"); el.errMsg.textContent = msg; }
+
+  // ===== AUTO-ANNOUNCE TIMER =====
+  var lastAutoYard = null;
+  var autoAnnounceInterval = null;
+
+  function startAutoAnnounce() {
+    if (autoAnnounceInterval) return;
+    autoAnnounceInterval = setInterval(function () {
+      if (currentScreen !== "hud" || !activeCourse || playerLat === null) return;
+      var hole = activeCourse.holes[currentHole];
+      var dC = distTo(hole.green.center);
+      if (dC === null) return;
+      var yds = m2y(dC);
+      if (lastAutoYard === null || Math.abs(yds - lastAutoYard) >= 5) {
+        lastAutoYard = yds;
+        speakHUD();
+      }
+    }, 30000);
+  }
 
   if (!("geolocation" in navigator)) {
     el.loading.classList.add("hidden"); showScreen("course");
@@ -501,6 +532,7 @@
     navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
   });
   renderDots();
+  startAutoAnnounce();
 })();
 </script>
 </body>
