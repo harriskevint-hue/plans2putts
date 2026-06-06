@@ -63,7 +63,6 @@
   .stroke-num { font-family: 'Anton', sans-serif; font-size: 2.2rem; color: var(--amber); display: block; line-height: 1; }
   .stroke-carry { font-size: 0.65rem; color: var(--dim); letter-spacing: 0.08em; }
   #screenHUD.focus-mode { background: transparent; }
-  #screenHUD.focus-mode > *:not(#liveRegion) { visibility: hidden; }
   .tee-badge { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--dim2); text-transform: uppercase; }
   .tee-badge span { color: var(--amber); }
   .hole-bar { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: center; }
@@ -580,10 +579,11 @@
   // ===== FOCUS MODE =====
   function showHUDDisplay() {
     if (currentScreen !== "hud") return;
+    el.screenHUD.style.opacity = "1";
     el.screenHUD.classList.remove("focus-mode");
     if (focusTimer) clearTimeout(focusTimer);
     focusTimer = setTimeout(function () {
-      el.screenHUD.classList.add("focus-mode");
+      el.screenHUD.style.opacity = "0";
     }, FOCUS_DELAY);
   }
 
