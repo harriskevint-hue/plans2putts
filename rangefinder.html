@@ -58,6 +58,11 @@
 
   /* ===== HUD ===== */
   #screenHUD { gap: 6px; padding: 12px; }
+  .stroke-bar { text-align: center; padding: 4px 0; }
+  .stroke-label { font-size: 0.6rem; color: var(--dim); letter-spacing: 0.2em; text-transform: uppercase; }
+  .stroke-num { font-family: 'Anton', sans-serif; font-size: 2.2rem; color: var(--amber); display: block; line-height: 1; }
+  .stroke-carry { font-size: 0.65rem; color: var(--dim); letter-spacing: 0.08em; }
+  #screenHUD.focus-mode > *:not(#liveRegion) { visibility: hidden; }
   .tee-badge { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--dim2); text-transform: uppercase; }
   .tee-badge span { color: var(--amber); }
   .hole-bar { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: center; }
@@ -120,7 +125,7 @@
   <div id="stateError" class="screen state-msg hidden">
     <h2 id="errTitle">GPS Error</h2>
     <p id="errMsg"></p>
-    <button id="retryBtn" class="focusable" tabindex="0" style="margin-top:24px;font-family:'DM Mono',monospace;font-size:1rem;font-weight:600;background:none;border:2px solid #4ade80;color:#4ade80;border-radius:12px;padding:14px 28px;cursor:pointer;letter-spacing:0.05em;">Tap to allow location</button>
+    <p style="margin-top:16px;font-size:0.75rem;color:#4ade80;">Retrying automatically...</p>
   </div>
 
   <!-- Course Selection -->
@@ -147,6 +152,11 @@
         <div class="hole-meta" id="holeMeta">Par 4</div>
       </div>
       <button class="focusable" id="nextBtn" tabindex="0" aria-label="Next hole">&#8250;</button>
+    </div>
+    <div class="stroke-bar focusable" id="strokeBar" tabindex="0" aria-label="0 strokes">
+      <span class="stroke-label">strokes</span>
+      <span class="stroke-num" id="strokeNum" aria-hidden="true">0</span>
+      <span class="stroke-carry" id="strokeCarry" aria-hidden="true"></span>
     </div>
     <div class="yardage-wrap focusable" id="yardageTap" tabindex="0" aria-label="Yardage" role="button">
       <div class="yardage-label" aria-hidden="true">to center</div>
@@ -221,6 +231,14 @@
   var lastSpokenHole = -1;
   var currentScreen = "course";
   var listFocusIdx = 0;
+  // Stroke tracking
+  var currentStrokes = 0;
+  var holeScores = [];
+  for (var i = 0; i < 18; i++) holeScores.push(null);
+  var lastShotLat = null, lastShotLng = null, lastCarry = null;
+  // Focus mode
+  var focusTimer = null;
+  var FOCUS_DELAY = 25000;
 
   // ===== DOM =====
   var el = {
@@ -249,6 +267,9 @@
     nextBtn: document.getElementById("nextBtn"),
     yardageTap: document.getElementById("yardageTap"),
     liveRegion: document.getElementById("liveRegion"),
+    strokeBar: document.getElementById("strokeBar"),
+    strokeNum: document.getElementById("strokeNum"),
+    strokeCarry: document.getElementById("strokeCarry"),
     muteBtn: document.getElementById("muteBtn"),
     courseBtn: document.getElementById("courseBtn")
   };
@@ -266,7 +287,7 @@
       el.screenCourse.classList.remove("hidden"); buildCourseList();
     }
     else if (name === "tee") { el.screenTee.classList.remove("hidden"); buildTeeList(); }
-    else if (name === "hud") { el.screenHUD.classList.remove("hidden"); updateHUD(); setTimeout(speakHUD, 800); }
+    else if (name === "hud") { el.screenHUD.classList.remove("hidden"); updateHUD(); setTimeout(speakHUD, 800); showHUDDisplay(); }
   }
 
   // ===== COURSE SELECTION =====
@@ -505,12 +526,76 @@
     navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
   }
 
+  // ===== STROKE TRACKING =====
+  function markStroke() {
+    currentStrokes++;
+    var carryText = "";
+    if (lastShotLat !== null && playerLat !== null) {
+      var d = haversine(lastShotLat, lastShotLng, playerLat, playerLng);
+      lastCarry = m2y(d);
+      carryText = lastCarry + " yd carry";
+      el.strokeCarry.textContent = carryText;
+    }
+    lastShotLat = playerLat; lastShotLng = playerLng;
+    el.strokeNum.textContent = currentStrokes;
+    el.strokeBar.setAttribute("aria-label", currentStrokes + " strokes" + (carryText ? ". Last shot " + carryText : ""));
+    var msg = "Shot " + currentStrokes + " marked." + (carryText ? " " + carryText + "." : "");
+    speak(msg);
+    showHUDDisplay();
+  }
+
+  function scoreWord(diff) {
+    if (diff === 0) return "even par";
+    if (diff === -1) return "birdie";
+    if (diff === -2) return "eagle";
+    if (diff === 1) return "bogey";
+    if (diff === 2) return "double bogey";
+    return (diff > 0 ? diff + " over par" : Math.abs(diff) + " under par");
+  }
+
+  function reportHoleScore() {
+    if (currentStrokes === 0) return;
+    var hole = activeCourse.holes[currentHole];
+    var par = hole.par || 4;
+    var diff = currentStrokes - par;
+    holeScores[currentHole] = currentStrokes;
+    var scored = holeScores.filter(function(s){ return s !== null; });
+    var total = scored.reduce(function(a,b){ return a+b; }, 0);
+    var totalPar = 0;
+    for (var i = 0; i <= currentHole; i++) { if (activeCourse.holes[i].par) totalPar += activeCourse.holes[i].par; }
+    var totalDiff = total - totalPar;
+    var msg = "Hole " + hole.hole + " complete. " + currentStrokes + " strokes. " + scoreWord(diff) + ".";
+    if (currentHole === 17) {
+      msg += " Round complete. " + total + " total. " + (totalDiff >= 0 ? totalDiff + " over" : Math.abs(totalDiff) + " under") + " par.";
+    } else {
+      msg += " Total: " + total + " through " + scored.length + " holes.";
+    }
+    speak(msg);
+    currentStrokes = 0; lastShotLat = null; lastShotLng = null; lastCarry = null;
+    el.strokeNum.textContent = 0; el.strokeCarry.textContent = "";
+    el.strokeBar.setAttribute("aria-label", "0 strokes");
+  }
+
+  // ===== FOCUS MODE =====
+  function showHUDDisplay() {
+    if (currentScreen !== "hud") return;
+    el.screenHUD.classList.remove("focus-mode");
+    if (focusTimer) clearTimeout(focusTimer);
+    focusTimer = setTimeout(function () {
+      el.screenHUD.classList.add("focus-mode");
+    }, FOCUS_DELAY);
+  }
+
   // ===== CONTROLS =====
-  el.prevBtn.addEventListener("click", function () { if (currentHole > 0) { currentHole--; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); } });
-  el.nextBtn.addEventListener("click", function () { if (currentHole < 17) { currentHole++; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); } });
-  el.yardageTap.addEventListener("click", function () { speakHUD(); });
-  el.muteBtn.addEventListener("click", function () { voiceOn = !voiceOn; if (!voiceOn) { speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.classList.remove("on"); } else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.classList.add("on"); speakHUD(); } });
+  el.prevBtn.addEventListener("click", function () { if (currentHole > 0) { currentHole--; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); showHUDDisplay(); } });
+  el.nextBtn.addEventListener("click", function () {
+    reportHoleScore();
+    if (currentHole < 17) { currentHole++; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); showHUDDisplay(); }
+  });
+  el.yardageTap.addEventListener("click", function () { speakHUD(); showHUDDisplay(); });
+  el.muteBtn.addEventListener("click", function () { voiceOn = !voiceOn; if (!voiceOn) { if (hasSpeech) speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.classList.remove("on"); } else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.classList.add("on"); speakHUD(); } showHUDDisplay(); });
   el.courseBtn.addEventListener("click", function () { showScreen("course"); });
+  el.strokeBar.addEventListener("click", function () { markStroke(); });
 
   // ===== D-PAD KEYBOARD NAVIGATION (Meta requirement) =====
   document.addEventListener("keydown", function (e) {
@@ -519,18 +604,32 @@
       else if (e.key === "ArrowDown") { e.preventDefault(); navList(1); }
       else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectFocused(); }
     } else if (currentScreen === "hud") {
+      showHUDDisplay();
       if (e.key === "ArrowLeft") { e.preventDefault(); el.prevBtn.click(); }
       else if (e.key === "ArrowRight") { e.preventDefault(); el.nextBtn.click(); }
       else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); speakHUD(); }
-      else if (e.key === "ArrowUp") { e.preventDefault(); speakHUD(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); markStroke(); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); speakHUD(); }
     }
   });
 
-  el.retryBtn.addEventListener("click", function () {
-    el.error.classList.add("hidden");
-    el.loading.classList.remove("hidden");
-    navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
-  });
+  // Auto-retry GPS every 8 seconds if permission denied
+  function startGPS() {
+    if (!("geolocation" in navigator)) {
+      el.loading.classList.add("hidden"); showScreen("course"); return;
+    }
+    navigator.geolocation.watchPosition(onPosition, function (err) {
+      var msgs = { 1:"Location permission denied. Retrying...", 2:"Position unavailable. Go outdoors.", 3:"Location timed out. Retrying..." };
+      el.loading.classList.add("hidden"); el.error.classList.remove("hidden");
+      el.errTitle.textContent = "GPS Error";
+      el.errMsg.textContent = msgs[err.code] || "Error: " + err.message;
+      setTimeout(function () {
+        el.error.classList.add("hidden"); el.loading.classList.remove("hidden");
+        startGPS();
+      }, 8000);
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+  }
+  startGPS();
   renderDots();
   startAutoAnnounce();
 })();
