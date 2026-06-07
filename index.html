@@ -64,39 +64,28 @@ nav {
 
 /* HERO VISUAL */
 .hero-visual { position:relative; }
-.phone-mockup {
-  background:var(--forest); border-radius:24px; padding:24px;
-  box-shadow:var(--shadow-lg);
-  position:relative; overflow:hidden;
+.hero-img-wrap { position:relative; }
+.hero-img { width:100%; border-radius:24px; box-shadow:var(--shadow-lg); display:block; }
+.floating-card {
+  position:absolute; bottom:24px; left:-24px;
+  background:rgba(27,58,42,0.95); backdrop-filter:blur(8px);
+  border-radius:16px; padding:18px 22px; box-shadow:var(--shadow-lg);
+  text-align:center; min-width:160px;
 }
-.phone-mockup::before {
-  content:''; position:absolute; inset:0;
-  background:linear-gradient(135deg,rgba(74,222,128,0.15) 0%,transparent 60%);
-}
-.mockup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
-.mockup-course { font-family:'DM Mono',monospace; font-size:0.7rem; color:rgba(255,255,255,0.5); letter-spacing:0.1em; }
-.mockup-hole { font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--green-bright); }
-.mockup-yardage { text-align:center; padding:24px 0; }
-.yard-num { font-family:'Playfair Display',serif; font-size:5rem; font-weight:900; color:#fff; line-height:1; }
-.yard-label { font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--green-bright); letter-spacing:0.2em; margin-top:6px; }
-.yard-splits { display:flex; justify-content:center; gap:24px; margin-top:16px; }
-.yard-split { text-align:center; }
-.split-num { font-family:'DM Mono',monospace; font-size:1.1rem; color:rgba(255,255,255,0.8); font-weight:500; }
-.split-label { font-size:0.62rem; color:rgba(255,255,255,0.4); letter-spacing:0.1em; margin-top:2px; }
-.mockup-footer { display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1); }
-.mockup-stroke { font-family:'DM Mono',monospace; font-size:0.75rem; color:rgba(255,255,255,0.5); }
-.mockup-gps { display:flex; align-items:center; gap:6px; }
-.gps-dot { width:8px; height:8px; border-radius:50%; background:var(--green-bright); animation:blink 2s infinite; }
-.gps-text { font-family:'DM Mono',monospace; font-size:0.65rem; color:var(--green-bright); letter-spacing:0.1em; }
+.fc-yard { font-family:'Playfair Display',serif; font-size:2.8rem; font-weight:900; color:#fff; line-height:1; }
+.fc-label { font-family:'DM Mono',monospace; font-size:0.6rem; color:var(--green-bright); letter-spacing:0.18em; margin-top:4px; }
+.fc-splits { display:flex; gap:10px; justify-content:center; margin-top:10px; font-family:'DM Mono',monospace; font-size:0.62rem; color:rgba(255,255,255,0.7); }
+.fc-gps { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.15); font-family:'DM Mono',monospace; font-size:0.58rem; color:var(--green-bright); letter-spacing:0.1em; }
+.gps-dot { width:7px; height:7px; border-radius:50%; background:var(--green-bright); animation:blink 2s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-.glasses-tag {
-  position:absolute; bottom:-16px; right:16px;
-  background:#fff; border-radius:12px; padding:10px 16px;
-  box-shadow:var(--shadow); display:flex; align-items:center; gap:10px;
-  font-size:0.8rem; font-weight:600; color:var(--forest);
-}
-.glasses-tag::before { content:'🕶️'; font-size:1.1rem; }
+/* SHOWCASE */
+.showcase { padding:0 48px 100px; background:var(--white); }
+.showcase-inner { max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center; }
+.showcase-img img { width:100%; border-radius:20px; box-shadow:var(--shadow-lg); display:block; }
+.showcase-text h2 { margin-bottom:20px; }
+.showcase-text p { color:var(--gray); font-size:1rem; line-height:1.8; margin-bottom:16px; }
+.showcase-text .lead { font-size:1.1rem; color:var(--forest); font-weight:500; }
 
 /* LOGOS */
 .logos-bar {
@@ -244,26 +233,17 @@ footer { background:var(--cream); border-top:1px solid var(--border); padding:48
     </div>
   </div>
   <div class="hero-visual">
-    <div class="phone-mockup">
-      <div class="mockup-header">
-        <span class="mockup-course">WHITE HORSE GC &nbsp;·&nbsp; HOLE 7</span>
-        <span class="mockup-hole">PAR 4</span>
-      </div>
-      <div class="mockup-yardage">
-        <div class="yard-num">152</div>
-        <div class="yard-label">YARDS TO CENTER</div>
-        <div class="yard-splits">
-          <div class="yard-split"><div class="split-num">141</div><div class="split-label">FRONT</div></div>
-          <div class="yard-split"><div class="split-num">152</div><div class="split-label">CENTER</div></div>
-          <div class="yard-split"><div class="split-num">163</div><div class="split-label">BACK</div></div>
+    <div class="hero-img-wrap">
+      <img src="golfer-hero.png" alt="Golfer wearing smart glasses reading the green" class="hero-img">
+      <div class="floating-card">
+        <div class="fc-yard">152</div>
+        <div class="fc-label">YARDS TO CENTER</div>
+        <div class="fc-splits">
+          <span>F 141</span><span>C 152</span><span>B 163</span>
         </div>
-      </div>
-      <div class="mockup-footer">
-        <span class="mockup-stroke">3 strokes this hole</span>
-        <div class="mockup-gps"><div class="gps-dot"></div><span class="gps-text">GPS ACTIVE</span></div>
+        <div class="fc-gps"><span class="gps-dot"></span>GPS ACTIVE · HOLE 7</div>
       </div>
     </div>
-    <div class="glasses-tag">Displaying on your lens</div>
   </div>
 </section>
 
@@ -316,6 +296,22 @@ footer { background:var(--cream); border-top:1px solid var(--border); padding:48
         </ul>
         <a href="https://www.oakley.com/en-us/l/oakley-meta" target="_blank" class="glass-link">View on Oakley.com →</a>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- SHOWCASE -->
+<section class="showcase">
+  <div class="showcase-inner">
+    <div class="showcase-img">
+      <img src="golfer-aiming.png" alt="Golfer judging distance to the pin with ShadesCaddie">
+    </div>
+    <div class="showcase-text">
+      <div class="section-label">See it in action</div>
+      <h2 class="section-title">Read the shot before you take it</h2>
+      <p class="lead">Your distance to the pin, right where you're looking.</p>
+      <p>No reaching for a rangefinder. No pulling out your phone. ShadesCaddie puts the yardage in your line of sight — or speaks it into your ear — the moment you line up your shot.</p>
+      <p>Step up to the ball already knowing the number. Commit to the club. Swing with confidence.</p>
     </div>
   </div>
 </section>
