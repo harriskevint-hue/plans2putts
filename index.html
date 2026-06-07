@@ -5,361 +5,211 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ShadesCaddie — Golf Intelligence Through Your Glasses</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --black: #080c0a;
-  --green: #4ade80;
-  --green-dim: #22c55e;
-  --green-dark: #14532d;
-  --gold: #d4af37;
-  --white: #f0f4f1;
-  --dim: #6b7280;
-  --card: #0f1a13;
-  --border: rgba(74,222,128,0.15);
+  --cream: #F7F5F0;
+  --white: #FFFFFF;
+  --forest: #1B3A2A;
+  --green: #2D6A4F;
+  --green-bright: #4ade80;
+  --green-light: #D1FAE5;
+  --gold: #B8860B;
+  --gray: #6B7280;
+  --gray-light: #F3F4F6;
+  --border: rgba(27,58,42,0.12);
+  --shadow: 0 4px 24px rgba(27,58,42,0.10);
+  --shadow-lg: 0 12px 48px rgba(27,58,42,0.15);
 }
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--black);
-  color: var(--white);
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  overflow-x: hidden;
-}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { background:var(--cream); color:var(--forest); font-family:'DM Sans',sans-serif; font-size:16px; line-height:1.6; overflow-x:hidden; }
 
 /* NAV */
 nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 40px;
-  background: rgba(8,12,10,0.92);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  background:rgba(247,245,240,0.95); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 48px;
 }
-.nav-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.4rem; font-weight: 700;
-  color: var(--white); letter-spacing: 0.02em;
-}
-.nav-logo span { color: var(--green); }
-.nav-cta {
-  background: var(--green); color: #000;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.8rem; font-weight: 500;
-  padding: 10px 24px; border-radius: 6px;
-  text-decoration: none; letter-spacing: 0.05em;
-  transition: background 0.2s;
-}
-.nav-cta:hover { background: #86efac; }
+.logo { font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:700; color:var(--forest); text-decoration:none; }
+.logo span { color:var(--green); }
+.nav-links { display:flex; align-items:center; gap:32px; }
+.nav-links a { font-size:0.9rem; color:var(--gray); text-decoration:none; font-weight:500; }
+.nav-links a:hover { color:var(--forest); }
+.nav-cta { background:var(--forest); color:#fff; padding:10px 24px; border-radius:8px; font-size:0.85rem; font-weight:600; text-decoration:none; transition:background 0.2s; letter-spacing:0.02em; }
+.nav-cta:hover { background:var(--green); }
 
 /* HERO */
 .hero {
-  min-height: 100vh;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 120px 24px 80px;
-  text-align: center;
-  position: relative; overflow: hidden;
+  min-height:100vh; padding:120px 48px 80px;
+  display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;
+  max-width:1200px; margin:0 auto;
 }
-.hero::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(20,83,45,0.25) 0%, transparent 70%);
-  pointer-events: none;
-}
-.hero-tag {
-  font-family: 'DM Mono', monospace; font-size: 0.72rem;
-  color: var(--green); letter-spacing: 0.25em; text-transform: uppercase;
-  margin-bottom: 24px;
-  opacity: 0; animation: fadeUp 0.8s 0.2s forwards;
-}
-.hero h1 {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(2.4rem, 6vw, 5rem);
-  font-weight: 900; line-height: 1.1;
-  max-width: 800px;
-  margin-bottom: 24px;
-  opacity: 0; animation: fadeUp 0.8s 0.4s forwards;
-}
-.hero h1 em { color: var(--green); font-style: normal; }
-.hero-sub {
-  font-size: 1.1rem; color: var(--dim);
-  max-width: 520px; margin: 0 auto 48px;
-  opacity: 0; animation: fadeUp 0.8s 0.6s forwards;
-}
-.hero-actions {
-  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
-  opacity: 0; animation: fadeUp 0.8s 0.8s forwards;
-  margin-bottom: 80px;
-}
-.btn-primary {
-  background: var(--green); color: #000;
-  font-family: 'DM Mono', monospace; font-size: 0.9rem; font-weight: 500;
-  padding: 16px 36px; border-radius: 8px;
-  text-decoration: none; letter-spacing: 0.05em;
-  transition: all 0.2s;
-}
-.btn-primary:hover { background: #86efac; transform: translateY(-2px); }
-.btn-secondary {
-  border: 1px solid var(--border); color: var(--white);
-  font-family: 'DM Mono', monospace; font-size: 0.9rem;
-  padding: 16px 36px; border-radius: 8px;
-  text-decoration: none; letter-spacing: 0.05em;
-  transition: all 0.2s;
-}
-.btn-secondary:hover { border-color: var(--green); color: var(--green); }
+.hero-badge { display:inline-flex; align-items:center; gap:8px; background:var(--green-light); color:var(--green); font-size:0.78rem; font-weight:600; padding:6px 14px; border-radius:20px; margin-bottom:24px; letter-spacing:0.04em; }
+.hero-badge::before { content:'●'; font-size:0.5rem; }
+.hero h1 { font-family:'Playfair Display',serif; font-size:clamp(2.6rem,5vw,4.2rem); font-weight:900; line-height:1.1; margin-bottom:20px; }
+.hero h1 em { color:var(--green); font-style:italic; }
+.hero-sub { font-size:1.1rem; color:var(--gray); max-width:440px; margin-bottom:36px; line-height:1.7; }
+.hero-btns { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:48px; }
+.btn-dark { background:var(--forest); color:#fff; padding:14px 32px; border-radius:8px; font-weight:600; font-size:0.95rem; text-decoration:none; transition:all 0.2s; }
+.btn-dark:hover { background:var(--green); transform:translateY(-1px); }
+.btn-outline { border:2px solid var(--border); color:var(--forest); padding:14px 32px; border-radius:8px; font-weight:600; font-size:0.95rem; text-decoration:none; transition:all 0.2s; }
+.btn-outline:hover { border-color:var(--green); color:var(--green); }
+.hero-stats { display:flex; gap:32px; }
+.stat-item { }
+.stat-num { font-family:'Playfair Display',serif; font-size:1.8rem; font-weight:900; color:var(--forest); }
+.stat-label { font-size:0.8rem; color:var(--gray); font-weight:500; }
 
-/* HUD MOCKUP */
-.hud-mockup {
-  position: relative; width: 300px; height: 220px;
-  opacity: 0; animation: fadeUp 0.8s 1s forwards;
+/* HERO VISUAL */
+.hero-visual { position:relative; }
+.phone-mockup {
+  background:var(--forest); border-radius:24px; padding:24px;
+  box-shadow:var(--shadow-lg);
+  position:relative; overflow:hidden;
 }
-.lens {
-  position: absolute; top: 20px; right: 20px;
-  width: 200px; height: 140px;
-  border: 2px solid rgba(74,222,128,0.3);
-  border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(74,222,128,0.05) 0%, transparent 70%);
-  overflow: hidden;
+.phone-mockup::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,rgba(74,222,128,0.15) 0%,transparent 60%);
 }
-.lens::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(74,222,128,0.08) 0%, transparent 60%);
-}
-.hud-yardage {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%);
-  font-family: 'Playfair Display', serif;
-  font-size: 3.5rem; font-weight: 900; color: var(--white);
-  text-shadow: 0 0 30px rgba(74,222,128,0.6);
-  animation: pulse 3s ease-in-out infinite;
-}
-.hud-label {
-  position: absolute; top: 58%; left: 50%; transform: translate(-50%, 0);
-  font-family: 'DM Mono', monospace; font-size: 0.55rem;
-  color: var(--green); letter-spacing: 0.2em; text-transform: uppercase;
-}
-.hud-sub {
-  position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 16px;
-  font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--green-dim);
-}
-.glasses-frame {
-  position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
-  border-top: 2px solid rgba(74,222,128,0.2);
-  background: linear-gradient(to bottom, transparent, rgba(8,12,10,0.8));
-}
-@keyframes pulse { 0%,100%{text-shadow:0 0 30px rgba(74,222,128,0.6)} 50%{text-shadow:0 0 50px rgba(74,222,128,0.9)} }
-@keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+.mockup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.mockup-course { font-family:'DM Mono',monospace; font-size:0.7rem; color:rgba(255,255,255,0.5); letter-spacing:0.1em; }
+.mockup-hole { font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--green-bright); }
+.mockup-yardage { text-align:center; padding:24px 0; }
+.yard-num { font-family:'Playfair Display',serif; font-size:5rem; font-weight:900; color:#fff; line-height:1; }
+.yard-label { font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--green-bright); letter-spacing:0.2em; margin-top:6px; }
+.yard-splits { display:flex; justify-content:center; gap:24px; margin-top:16px; }
+.yard-split { text-align:center; }
+.split-num { font-family:'DM Mono',monospace; font-size:1.1rem; color:rgba(255,255,255,0.8); font-weight:500; }
+.split-label { font-size:0.62rem; color:rgba(255,255,255,0.4); letter-spacing:0.1em; margin-top:2px; }
+.mockup-footer { display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1); }
+.mockup-stroke { font-family:'DM Mono',monospace; font-size:0.75rem; color:rgba(255,255,255,0.5); }
+.mockup-gps { display:flex; align-items:center; gap:6px; }
+.gps-dot { width:8px; height:8px; border-radius:50%; background:var(--green-bright); animation:blink 2s infinite; }
+.gps-text { font-family:'DM Mono',monospace; font-size:0.65rem; color:var(--green-bright); letter-spacing:0.1em; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* COMPATIBLE */
-.compatible {
-  padding: 80px 40px;
-  border-top: 1px solid var(--border);
-  text-align: center;
+.glasses-tag {
+  position:absolute; bottom:-16px; right:16px;
+  background:#fff; border-radius:12px; padding:10px 16px;
+  box-shadow:var(--shadow); display:flex; align-items:center; gap:10px;
+  font-size:0.8rem; font-weight:600; color:var(--forest);
 }
-.compatible-label {
-  font-family: 'DM Mono', monospace; font-size: 0.7rem;
-  color: var(--dim); letter-spacing: 0.2em; text-transform: uppercase;
-  margin-bottom: 40px;
-}
-.glasses-grid {
-  display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
-  max-width: 800px; margin: 0 auto;
-}
-.glasses-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 16px; padding: 32px 40px;
-  flex: 1; min-width: 280px;
-  transition: border-color 0.2s;
-}
-.glasses-card:hover { border-color: var(--green); }
-.glasses-icon { font-size: 2rem; margin-bottom: 12px; }
-.glasses-model {
-  font-family: 'Playfair Display', serif; font-size: 1.2rem;
-  margin-bottom: 6px;
-}
-.glasses-price { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--gold); margin-bottom: 16px; }
-.glasses-feature {
-  font-size: 0.85rem; color: var(--dim); line-height: 1.8;
-  text-align: left;
-}
-.glasses-feature span { color: var(--green); margin-right: 6px; }
-.full-badge {
-  display: inline-block; background: var(--green-dark);
-  color: var(--green); font-family: 'DM Mono', monospace;
-  font-size: 0.65rem; padding: 4px 12px; border-radius: 20px;
-  letter-spacing: 0.1em; margin-bottom: 16px;
-}
+.glasses-tag::before { content:'🕶️'; font-size:1.1rem; }
 
-/* FEATURES */
-.features {
-  padding: 100px 40px;
-  border-top: 1px solid var(--border);
+/* LOGOS */
+.logos-bar {
+  background:var(--white); border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+  padding:20px 48px; display:flex; align-items:center; justify-content:center; gap:48px; flex-wrap:wrap;
 }
-.section-header { text-align: center; margin-bottom: 64px; }
-.section-tag {
-  font-family: 'DM Mono', monospace; font-size: 0.7rem;
-  color: var(--green); letter-spacing: 0.25em; text-transform: uppercase;
-  margin-bottom: 16px;
+.logos-label { font-size:0.78rem; color:var(--gray); font-weight:500; letter-spacing:0.06em; text-transform:uppercase; }
+.logo-item { font-family:'DM Mono',monospace; font-size:0.85rem; font-weight:500; color:var(--gray); }
+
+/* GLASSES SECTION */
+.glasses-section { padding:100px 48px; background:var(--white); }
+.section-label { font-family:'DM Mono',monospace; font-size:0.72rem; color:var(--green); letter-spacing:0.2em; text-transform:uppercase; margin-bottom:12px; }
+.section-title { font-family:'Playfair Display',serif; font-size:clamp(2rem,4vw,3rem); font-weight:700; margin-bottom:16px; }
+.section-sub { font-size:1rem; color:var(--gray); max-width:520px; margin-bottom:56px; }
+.glasses-grid { display:grid; grid-template-columns:1fr 1fr; gap:32px; max-width:1100px; }
+.glass-card {
+  border:1px solid var(--border); border-radius:20px; overflow:hidden;
+  background:var(--cream); transition:box-shadow 0.2s, transform 0.2s;
 }
-.section-title {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 700;
+.glass-card:hover { box-shadow:var(--shadow-lg); transform:translateY(-4px); }
+.glass-img {
+  width:100%; height:240px; object-fit:cover;
+  background:linear-gradient(135deg,#1B3A2A,#2D6A4F);
+  display:flex; align-items:center; justify-content:center;
+  font-size:5rem;
 }
-.features-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px; max-width: 1100px; margin: 0 auto;
-}
-.feature-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 16px; padding: 36px 32px;
-  transition: border-color 0.2s, transform 0.2s;
-}
-.feature-card:hover { border-color: var(--green); transform: translateY(-4px); }
-.feature-num {
-  font-family: 'DM Mono', monospace; font-size: 0.7rem;
-  color: var(--green); letter-spacing: 0.15em; margin-bottom: 20px;
-}
-.feature-title {
-  font-family: 'Playfair Display', serif; font-size: 1.3rem;
-  margin-bottom: 12px;
-}
-.feature-desc { font-size: 0.9rem; color: var(--dim); line-height: 1.7; }
+.glass-img img { width:100%; height:100%; object-fit:cover; }
+.glass-body { padding:28px; }
+.glass-badge { display:inline-block; background:var(--green-light); color:var(--green); font-size:0.7rem; font-weight:600; padding:4px 12px; border-radius:20px; margin-bottom:12px; letter-spacing:0.06em; }
+.glass-name { font-family:'Playfair Display',serif; font-size:1.4rem; font-weight:700; margin-bottom:4px; }
+.glass-price { font-family:'DM Mono',monospace; font-size:0.8rem; color:var(--gold); margin-bottom:16px; font-weight:500; }
+.glass-features { list-style:none; }
+.glass-features li { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:0.9rem; color:var(--gray); }
+.glass-features li:last-child { border-bottom:none; }
+.glass-features li::before { content:'✓'; color:var(--green); font-weight:700; flex-shrink:0; margin-top:2px; }
+.glass-link { display:inline-flex; align-items:center; gap:6px; margin-top:20px; font-size:0.85rem; font-weight:600; color:var(--green); text-decoration:none; }
+.glass-link:hover { text-decoration:underline; }
 
 /* HOW IT WORKS */
-.how {
-  padding: 100px 40px;
-  border-top: 1px solid var(--border);
-  background: linear-gradient(180deg, transparent, rgba(20,83,45,0.08), transparent);
-}
-.steps {
-  display: flex; gap: 0; max-width: 900px; margin: 0 auto;
-  position: relative;
-}
-.steps::before {
-  content: '';
-  position: absolute; top: 28px; left: calc(16.6% + 28px); right: calc(16.6% + 28px);
-  height: 1px; background: var(--border);
-}
-.step {
-  flex: 1; text-align: center; padding: 0 20px;
-}
-.step-num {
-  width: 56px; height: 56px; border-radius: 50%;
-  border: 2px solid var(--green); color: var(--green);
-  font-family: 'DM Mono', monospace; font-size: 1.1rem;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 20px; background: var(--black);
-}
-.step-title {
-  font-family: 'Playfair Display', serif; font-size: 1rem;
-  margin-bottom: 8px;
-}
-.step-desc { font-size: 0.85rem; color: var(--dim); }
+.how-section { padding:100px 48px; background:var(--cream); }
+.how-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:48px; max-width:1000px; margin:0 auto; position:relative; }
+.how-grid::after { content:''; position:absolute; top:40px; left:calc(16.7% + 40px); right:calc(16.7% + 40px); height:2px; background:linear-gradient(to right,var(--green-light),var(--green-light)); }
+.how-step { text-align:center; }
+.how-num { width:80px; height:80px; border-radius:50%; background:var(--green); color:#fff; font-family:'Playfair Display',serif; font-size:1.8rem; font-weight:900; display:flex; align-items:center; justify-content:center; margin:0 auto 20px; position:relative; z-index:1; box-shadow:0 8px 24px rgba(45,106,79,0.3); }
+.how-title { font-family:'Playfair Display',serif; font-size:1.2rem; font-weight:700; margin-bottom:10px; }
+.how-desc { font-size:0.9rem; color:var(--gray); line-height:1.7; }
+
+/* FEATURES */
+.features-section { padding:100px 48px; background:var(--white); }
+.features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; max-width:1100px; }
+.feat-card { background:var(--cream); border:1px solid var(--border); border-radius:16px; padding:32px 28px; transition:all 0.2s; }
+.feat-card:hover { box-shadow:var(--shadow); transform:translateY(-3px); }
+.feat-icon { font-size:2rem; margin-bottom:16px; }
+.feat-num { font-family:'DM Mono',monospace; font-size:0.7rem; color:var(--green); letter-spacing:0.15em; margin-bottom:10px; }
+.feat-title { font-family:'Playfair Display',serif; font-size:1.15rem; font-weight:700; margin-bottom:10px; }
+.feat-desc { font-size:0.875rem; color:var(--gray); line-height:1.7; }
 
 /* PRICING */
-.pricing {
-  padding: 100px 40px;
-  border-top: 1px solid var(--border);
-}
-.pricing-grid {
-  display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
-  max-width: 900px; margin: 0 auto;
-}
-.price-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 20px; padding: 40px 36px;
-  flex: 1; min-width: 240px; max-width: 320px;
-  position: relative;
-}
-.price-card.featured {
-  border-color: var(--green);
-  background: linear-gradient(135deg, rgba(20,83,45,0.3) 0%, var(--card) 60%);
-}
-.price-badge {
-  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-  background: var(--green); color: #000;
-  font-family: 'DM Mono', monospace; font-size: 0.65rem;
-  padding: 4px 16px; border-radius: 20px; letter-spacing: 0.1em;
-  white-space: nowrap;
-}
-.price-tier {
-  font-family: 'DM Mono', monospace; font-size: 0.75rem;
-  color: var(--dim); letter-spacing: 0.15em; margin-bottom: 12px;
-}
-.price-amount {
-  font-family: 'Playfair Display', serif; font-size: 3rem; font-weight: 900;
-  margin-bottom: 4px;
-}
-.price-amount sup { font-size: 1.2rem; vertical-align: top; margin-top: 12px; display: inline-block; }
-.price-period { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--dim); margin-bottom: 28px; }
-.price-features { list-style: none; margin-bottom: 32px; }
-.price-features li {
-  font-size: 0.875rem; color: var(--dim); padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
-}
-.price-features li::before { content: '✓'; color: var(--green); font-family: 'DM Mono', monospace; flex-shrink: 0; }
-.price-cta {
-  display: block; width: 100%; padding: 14px;
-  border-radius: 8px; text-align: center; text-decoration: none;
-  font-family: 'DM Mono', monospace; font-size: 0.8rem; letter-spacing: 0.08em;
-  transition: all 0.2s;
-}
-.price-cta.primary { background: var(--green); color: #000; }
-.price-cta.primary:hover { background: #86efac; }
-.price-cta.outline { border: 1px solid var(--border); color: var(--white); }
-.price-cta.outline:hover { border-color: var(--green); color: var(--green); }
+.pricing-section { padding:100px 48px; background:var(--cream); }
+.pricing-grid { display:flex; gap:24px; max-width:980px; flex-wrap:wrap; }
+.price-card { background:var(--white); border:1px solid var(--border); border-radius:20px; padding:40px 36px; flex:1; min-width:240px; position:relative; }
+.price-card.featured { border-color:var(--green); box-shadow:0 0 0 1px var(--green),var(--shadow-lg); }
+.price-pop { position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:var(--green); color:#fff; font-size:0.68rem; font-weight:700; padding:5px 18px; border-radius:20px; letter-spacing:0.08em; white-space:nowrap; }
+.price-tier { font-family:'DM Mono',monospace; font-size:0.72rem; color:var(--gray); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:12px; }
+.price-amt { font-family:'Playfair Display',serif; font-size:3.2rem; font-weight:900; color:var(--forest); line-height:1; }
+.price-amt sup { font-size:1.4rem; vertical-align:top; margin-top:8px; display:inline-block; }
+.price-period { font-family:'DM Mono',monospace; font-size:0.78rem; color:var(--gray); margin-top:6px; margin-bottom:28px; }
+.price-list { list-style:none; margin-bottom:32px; }
+.price-list li { font-size:0.875rem; color:var(--gray); padding:9px 0; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:10px; }
+.price-list li::before { content:'✓'; color:var(--green); font-weight:700; flex-shrink:0; }
+.price-btn { display:block; text-align:center; padding:14px; border-radius:8px; font-weight:600; font-size:0.88rem; text-decoration:none; transition:all 0.2s; letter-spacing:0.02em; }
+.price-btn.dark { background:var(--forest); color:#fff; }
+.price-btn.dark:hover { background:var(--green); }
+.price-btn.light { border:2px solid var(--border); color:var(--forest); }
+.price-btn.light:hover { border-color:var(--green); color:var(--green); }
 
 /* FAQ */
-.faq {
-  padding: 100px 40px;
-  border-top: 1px solid var(--border);
-  max-width: 720px; margin: 0 auto;
-}
-.faq-item {
-  border-bottom: 1px solid var(--border); padding: 24px 0; cursor: pointer;
-}
-.faq-question {
-  font-family: 'Playfair Display', serif; font-size: 1.05rem;
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 16px; user-select: none;
-}
-.faq-question::after { content: '+'; color: var(--green); font-size: 1.4rem; font-family: 'DM Mono', monospace; flex-shrink: 0; transition: transform 0.2s; }
-.faq-item.open .faq-question::after { transform: rotate(45deg); }
-.faq-answer { font-size: 0.9rem; color: var(--dim); line-height: 1.8; max-height: 0; overflow: hidden; transition: max-height 0.3s, padding 0.3s; }
-.faq-item.open .faq-answer { max-height: 200px; padding-top: 16px; }
+.faq-section { padding:100px 48px; background:var(--white); }
+.faq-wrap { max-width:720px; }
+.faq-item { border-bottom:1px solid var(--border); }
+.faq-q { display:flex; justify-content:space-between; align-items:center; padding:22px 0; cursor:pointer; gap:16px; font-family:'Playfair Display',serif; font-size:1.05rem; font-weight:700; color:var(--forest); user-select:none; }
+.faq-q .toggle { width:28px; height:28px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:1rem; color:var(--green); flex-shrink:0; transition:all 0.2s; font-family:'DM Mono',monospace; }
+.faq-item.open .toggle { background:var(--green); border-color:var(--green); color:#fff; transform:rotate(45deg); }
+.faq-a { font-size:0.92rem; color:var(--gray); line-height:1.8; max-height:0; overflow:hidden; transition:max-height 0.3s, padding 0.3s; }
+.faq-item.open .faq-a { max-height:160px; padding-bottom:20px; }
+
+/* CTA BANNER */
+.cta-banner { padding:80px 48px; background:var(--forest); text-align:center; }
+.cta-banner h2 { font-family:'Playfair Display',serif; font-size:clamp(1.8rem,4vw,3rem); font-weight:900; color:#fff; margin-bottom:16px; }
+.cta-banner p { font-size:1rem; color:rgba(255,255,255,0.65); max-width:480px; margin:0 auto 36px; }
+.cta-banner .btn-green { background:var(--green-bright); color:#000; padding:16px 40px; border-radius:10px; font-weight:700; font-size:1rem; text-decoration:none; display:inline-block; transition:all 0.2s; }
+.cta-banner .btn-green:hover { background:#86efac; transform:translateY(-2px); }
 
 /* FOOTER */
-footer {
-  padding: 60px 40px 40px;
-  border-top: 1px solid var(--border);
-  display: flex; flex-direction: column; align-items: center; gap: 20px;
-  text-align: center;
-}
-.footer-logo {
-  font-family: 'Playfair Display', serif; font-size: 1.2rem;
-  color: var(--white);
-}
-.footer-logo span { color: var(--green); }
-.footer-links { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
-.footer-links a { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--dim); text-decoration: none; }
-.footer-links a:hover { color: var(--green); }
-.footer-copy { font-size: 0.8rem; color: var(--dim); }
+footer { background:var(--cream); border-top:1px solid var(--border); padding:48px; display:flex; flex-wrap:wrap; gap:24px; justify-content:space-between; align-items:center; }
+.footer-logo { font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; }
+.footer-logo span { color:var(--green); }
+.footer-links { display:flex; gap:24px; flex-wrap:wrap; }
+.footer-links a { font-size:0.85rem; color:var(--gray); text-decoration:none; }
+.footer-links a:hover { color:var(--forest); }
+.footer-copy { font-size:0.8rem; color:var(--gray); }
 
-@media (max-width: 640px) {
-  nav { padding: 16px 20px; }
-  .hero { padding: 100px 20px 60px; }
-  .features, .how, .pricing, .compatible { padding: 60px 20px; }
-  .steps { flex-direction: column; gap: 40px; }
-  .steps::before { display: none; }
-  .step-num { margin-bottom: 12px; }
-  .price-card { max-width: 100%; }
+/* RESPONSIVE */
+@media (max-width:768px) {
+  nav { padding:16px 20px; }
+  .nav-links { display:none; }
+  .hero { grid-template-columns:1fr; padding:100px 20px 60px; gap:40px; }
+  .glasses-grid, .features-grid, .how-grid { grid-template-columns:1fr; }
+  .how-grid::after { display:none; }
+  .glasses-section, .how-section, .features-section, .pricing-section, .faq-section { padding:64px 20px; }
+  .logos-bar { padding:20px; gap:24px; }
+  .cta-banner { padding:60px 20px; }
+  footer { padding:32px 20px; }
 }
 </style>
 </head>
@@ -367,202 +217,238 @@ footer {
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">Shades<span>Caddie</span></div>
+  <a href="#" class="logo">Shades<span>Caddie</span></a>
+  <div class="nav-links">
+    <a href="#glasses">Compatible Glasses</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+  </div>
   <a href="mailto:harriskevint@gmail.com?subject=ShadesCaddie Early Access" class="nav-cta">Get Early Access</a>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-tag">Now available for Meta Ray-Ban &amp; Oakley glasses</div>
-  <h1>Golf Intelligence.<br><em>Delivered Through</em><br>Your Shades.</h1>
-  <p class="hero-sub">Live GPS yardages, voice caddy, and stroke tracking — all through the glasses you're already wearing on the course.</p>
-  <div class="hero-actions">
-    <a href="mailto:harriskevint@gmail.com?subject=ShadesCaddie Early Access" class="btn-primary">Get Early Access</a>
-    <a href="rangefinder.html" class="btn-secondary">Try the App</a>
+  <div class="hero-left">
+    <div class="hero-badge">Now available for Meta &amp; Oakley glasses</div>
+    <h1>Golf Intelligence.<br><em>In Your Shades.</em></h1>
+    <p class="hero-sub">Live GPS yardages, voice caddy, and stroke tracking — delivered through the smart glasses you're already wearing on the course.</p>
+    <div class="hero-btns">
+      <a href="mailto:harriskevint@gmail.com?subject=ShadesCaddie Early Access" class="btn-dark">Get Early Access</a>
+      <a href="rangefinder.html" class="btn-outline">Try the App →</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item"><div class="stat-num">152</div><div class="stat-label">Yards to center, live</div></div>
+      <div class="stat-item"><div class="stat-num">18</div><div class="stat-label">Holes tracked</div></div>
+      <div class="stat-item"><div class="stat-num">$0</div><div class="stat-label">Home course, free</div></div>
+    </div>
   </div>
-  <!-- HUD Mockup -->
-  <div class="hud-mockup">
-    <div class="lens">
-      <div class="hud-yardage">152</div>
-      <div class="hud-label">yards to center</div>
-      <div class="hud-sub">
-        <span>F: 143</span>
-        <span>B: 161</span>
+  <div class="hero-visual">
+    <div class="phone-mockup">
+      <div class="mockup-header">
+        <span class="mockup-course">WHITE HORSE GC &nbsp;·&nbsp; HOLE 7</span>
+        <span class="mockup-hole">PAR 4</span>
+      </div>
+      <div class="mockup-yardage">
+        <div class="yard-num">152</div>
+        <div class="yard-label">YARDS TO CENTER</div>
+        <div class="yard-splits">
+          <div class="yard-split"><div class="split-num">141</div><div class="split-label">FRONT</div></div>
+          <div class="yard-split"><div class="split-num">152</div><div class="split-label">CENTER</div></div>
+          <div class="yard-split"><div class="split-num">163</div><div class="split-label">BACK</div></div>
+        </div>
+      </div>
+      <div class="mockup-footer">
+        <span class="mockup-stroke">3 strokes this hole</span>
+        <div class="mockup-gps"><div class="gps-dot"></div><span class="gps-text">GPS ACTIVE</span></div>
       </div>
     </div>
-    <div class="glasses-frame"></div>
+    <div class="glasses-tag">Displaying on your lens</div>
   </div>
 </section>
 
-<!-- COMPATIBLE -->
-<section class="compatible">
-  <div class="compatible-label">Compatible Hardware</div>
+<!-- LOGOS BAR -->
+<div class="logos-bar">
+  <span class="logos-label">Compatible with</span>
+  <span class="logo-item">Meta Ray-Ban Display</span>
+  <span class="logo-item">·</span>
+  <span class="logo-item">Oakley Meta HSTN</span>
+  <span class="logo-item">·</span>
+  <span class="logo-item">Oakley Meta Vanguard</span>
+</div>
+
+<!-- GLASSES SECTION -->
+<section class="glasses-section" id="glasses">
+  <div class="section-label">Compatible Hardware</div>
+  <h2 class="section-title">Two ways to wear your caddie</h2>
+  <p class="section-sub">ShadesCaddie delivers a different experience depending on your glasses — visual HUD or voice caddy, both hands-free.</p>
   <div class="glasses-grid">
-    <div class="glasses-card">
-      <div class="glasses-icon">🕶️</div>
-      <div class="full-badge">FULL EXPERIENCE</div>
-      <div class="glasses-model">Meta Ray-Ban Display</div>
-      <div class="glasses-price">$799 · With in-lens display</div>
-      <div class="glasses-feature">
-        <div><span>✓</span>Live yardage HUD on the lens</div>
-        <div><span>✓</span>Voice caddy through speakers</div>
-        <div><span>✓</span>D-pad gesture navigation</div>
-        <div><span>✓</span>Visual scorecard on-course</div>
+    <div class="glass-card">
+      <div class="glass-img">
+        <img src="https://images.unsplash.com/photo-1574258495973-f010dfbb5371?auto=format&fit=crop&w=600&q=80" alt="Meta Ray-Ban Display Glasses" onerror="this.parentElement.innerHTML='🕶️'">
+      </div>
+      <div class="glass-body">
+        <span class="glass-badge">FULL EXPERIENCE</span>
+        <div class="glass-name">Meta Ray-Ban Display</div>
+        <div class="glass-price">$799 · In-lens display</div>
+        <ul class="glass-features">
+          <li>Live yardage HUD displays directly on the lens</li>
+          <li>Full visual scorecard and hazard distances</li>
+          <li>D-pad gesture navigation — no phone touch needed</li>
+          <li>Voice caddy through open-ear speakers</li>
+        </ul>
+        <a href="https://www.meta.com/smart-glasses/ray-ban-display/" target="_blank" class="glass-link">View on Meta.com →</a>
       </div>
     </div>
-    <div class="glasses-card">
-      <div class="glasses-icon">🕶️</div>
-      <div class="glasses-model">Oakley Meta HSTN</div>
-      <div class="glasses-price">$399 · Prizm Dark Golf Lenses</div>
-      <div class="glasses-feature">
-        <div><span>✓</span>Voice caddy through open-ear speakers</div>
-        <div><span>✓</span>Auto yardage updates while walking</div>
-        <div><span>✓</span>Score reports after each hole</div>
-        <div><span>✓</span>Designed for golf by Meta</div>
+    <div class="glass-card">
+      <div class="glass-img">
+        <img src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=600&q=80" alt="Oakley Meta HSTN Glasses" onerror="this.parentElement.innerHTML='🕶️'">
+      </div>
+      <div class="glass-body">
+        <span class="glass-badge" style="background:#FEF3C7;color:#92400E;">VOICE CADDY</span>
+        <div class="glass-name">Oakley Meta HSTN</div>
+        <div class="glass-price">$479 · Prizm™ Dark Golf Lenses · Designed for golf</div>
+        <ul class="glass-features">
+          <li>Yardages spoken through open-ear speakers automatically</li>
+          <li>Score reports after each hole, phone stays in pocket</li>
+          <li>Prizm golf lenses enhance course clarity</li>
+          <li>DAT-ready for future hands-free integration</li>
+        </ul>
+        <a href="https://www.oakley.com/en-us/l/oakley-meta" target="_blank" class="glass-link">View on Oakley.com →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div class="section-label">Getting started</div>
+    <h2 class="section-title">On the course in minutes</h2>
+    <div class="how-grid" style="margin-top:56px;">
+      <div class="how-step">
+        <div class="how-num">1</div>
+        <div class="how-title">Subscribe</div>
+        <p class="how-desc">Get your ShadesCaddie subscription. Receive the app URL instantly via email.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">2</div>
+        <div class="how-title">Connect</div>
+        <p class="how-desc">Open the Meta AI app on your phone and add ShadesCaddie as a Web App. Takes about 60 seconds.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">3</div>
+        <div class="how-title">Play</div>
+        <p class="how-desc">Open ShadesCaddie on the course, allow location. Your caddie is ready on the first tee.</p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- FEATURES -->
-<section class="features">
-  <div class="section-header">
-    <div class="section-tag">What ShadesCaddie does</div>
-    <h2 class="section-title">Your caddie is built into your shades</h2>
-  </div>
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-num">01</div>
-      <div class="feature-title">Live GPS Yardages</div>
-      <p class="feature-desc">Real-time distance to green front, center, and back. Nearest hazards sorted by proximity. Dogleg and layup callouts — all updated as you walk.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-num">02</div>
-      <div class="feature-title">Hands-Free Voice Caddy</div>
-      <p class="feature-desc">Yardages spoken through the glasses' open-ear speakers automatically. Hear your distance without touching your phone or looking at a screen.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-num">03</div>
-      <div class="feature-title">Stroke Counting & Scoring</div>
-      <p class="feature-desc">Mark each shot with a gesture. After every hole: "Hole 7 complete. 5 strokes. Bogey. Total 38 through 7 holes." Golf score vocabulary built in.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-num">04</div>
-      <div class="feature-title">Downloadable Scorecard</div>
-      <p class="feature-desc">After your round, download a full PDF scorecard with hole-by-hole scores, score vs par, and carry distances per club. Share with your playing partners.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-num">05</div>
-      <div class="feature-title">Club Distance Tracking</div>
-      <p class="feature-desc">Tag each shot with the club used. Track carry distances every round. Over time ShadesCaddie builds your personal club distance profile.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-num">06</div>
-      <div class="feature-title">Focus Mode</div>
-      <p class="feature-desc">Display clears automatically before your shot. On the Display glasses, the lens goes fully transparent — nothing in your field of view when you need to concentrate.</p>
-    </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section class="how">
-  <div class="section-header">
-    <div class="section-tag">Getting started</div>
-    <h2 class="section-title">On the course in minutes</h2>
-  </div>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-title">Subscribe</div>
-      <p class="step-desc">Get your ShadesCaddie subscription and receive the app URL.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-title">Connect</div>
-      <p class="step-desc">Add the URL to your Meta glasses via the Meta AI app in minutes.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-title">Play</div>
-      <p class="step-desc">Open ShadesCaddie on the course. Allow location. Your caddie is ready.</p>
+<section class="features-section" id="features">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div class="section-label">What ShadesCaddie does</div>
+    <h2 class="section-title">Your caddie, built into your shades</h2>
+    <div class="features-grid" style="margin-top:48px;">
+      <div class="feat-card"><div class="feat-icon">📍</div><div class="feat-num">01</div><div class="feat-title">Live GPS Yardages</div><p class="feat-desc">Front, center, and back distances update in real-time as you walk. Nearest hazards sorted automatically. No manual input needed.</p></div>
+      <div class="feat-card"><div class="feat-icon">🔊</div><div class="feat-num">02</div><div class="feat-title">Hands-Free Voice Caddy</div><p class="feat-desc">Yardages announce through your glasses' open-ear speakers every 30 seconds as distance changes. Never look at a screen again.</p></div>
+      <div class="feat-card"><div class="feat-icon">⛳</div><div class="feat-num">03</div><div class="feat-title">Stroke Counting</div><p class="feat-desc">Mark each shot with a gesture. Hole-by-hole reports announce automatically. "Hole 7 complete. 5 strokes. Bogey. Total 38."</p></div>
+      <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-num">04</div><div class="feat-title">Visual Scorecard</div><p class="feat-desc">Full 18-hole scorecard on the Display lens or phone screen. Color-coded by par. Download as PDF after every round.</p></div>
+      <div class="feat-card"><div class="feat-icon">🏌️</div><div class="feat-num">05</div><div class="feat-title">Club Distance Tracking</div><p class="feat-desc">Tag each shot with the club used. Build your personal carry distance profile. Get smarter club recommendations every round.</p></div>
+      <div class="feat-card"><div class="feat-icon">🎯</div><div class="feat-num">06</div><div class="feat-title">Focus Mode</div><p class="feat-desc">Display auto-clears before your shot — nothing in your field of view when you need to concentrate. Restores with a gesture.</p></div>
     </div>
   </div>
 </section>
 
 <!-- PRICING -->
-<section class="pricing">
-  <div class="section-header">
-    <div class="section-tag">Pricing</div>
+<section class="pricing-section" id="pricing">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div class="section-label">Pricing</div>
     <h2 class="section-title">Less than a sleeve of Pro V1s</h2>
-  </div>
-  <div class="pricing-grid">
-    <div class="price-card">
-      <div class="price-tier">FREE</div>
-      <div class="price-amount">$0</div>
-      <div class="price-period">forever</div>
-      <ul class="price-features">
-        <li>Home course GPS yardages</li>
-        <li>Voice caddy</li>
-        <li>Stroke counting</li>
-        <li>Basic scorecard</li>
-      </ul>
-      <a href="rangefinder.html" class="price-cta outline">Try Free</a>
-    </div>
-    <div class="price-card featured">
-      <div class="price-badge">MOST POPULAR</div>
-      <div class="price-tier">PREMIUM</div>
-      <div class="price-amount"><sup>$</sup>4<sup style="font-size:1.5rem">.99</sup></div>
-      <div class="price-period">per month</div>
-      <ul class="price-features">
-        <li>Thousands of courses</li>
-        <li>Club distance tracking</li>
-        <li>AI post-round caddie report</li>
-        <li>Round history &amp; analytics</li>
-        <li>PDF scorecard download</li>
-      </ul>
-      <a href="mailto:harriskevint@gmail.com?subject=ShadesCaddie Premium" class="price-cta primary">Get Premium</a>
-    </div>
-    <div class="price-card">
-      <div class="price-tier">ANNUAL</div>
-      <div class="price-amount"><sup>$</sup>39<sup style="font-size:1.5rem">.99</sup></div>
-      <div class="price-period">per year — save $20</div>
-      <ul class="price-features">
-        <li>Everything in Premium</li>
-        <li>Priority support</li>
-        <li>Early access to new features</li>
-        <li>Two months free</li>
-      </ul>
-      <a href="mailto:harriskevint@gmail.com?subject=ShadesCaddie Annual" class="price-cta outline">Get Annual</a>
+    <p class="section-sub" style="margin-bottom:48px;">Start free with your home course. Upgrade when you're ready for everything.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="price-tier">FREE</div>
+        <div class="price-amt">$0</div>
+        <div class="price-period">your home course, forever</div>
+        <ul class="price-list">
+          <li>GPS yardages for one course</li>
+          <li>Voice caddy through glasses</li>
+          <li>Stroke counting &amp; scoring</li>
+          <li>Basic scorecard</li>
+        </ul>
+        <a href="rangefinder.html" class="price-btn light">Try Free</a>
+      </div>
+      <div class="price-card featured">
+        <div class="price-pop">MOST POPULAR</div>
+        <div class="price-tier">PREMIUM</div>
+        <div class="price-amt"><sup>$</sup>4<sup style="font-size:1.2rem">.99</sup></div>
+        <div class="price-period">per month</div>
+        <ul class="price-list">
+          <li>Thousands of courses</li>
+          <li>Club distance analytics</li>
+          <li>AI post-round caddie report</li>
+          <li>Round history &amp; trends</li>
+          <li>PDF scorecard download</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="mailto:harriskevint@gmail.com?subject=ShadesCaddie Premium" class="price-btn dark">Get Premium</a>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">ANNUAL</div>
+        <div class="price-amt"><sup>$</sup>39<sup style="font-size:1.2rem">.99</sup></div>
+        <div class="price-period">per year — save $20</div>
+        <ul class="price-list">
+          <li>Everything in Premium</li>
+          <li>Two months free</li>
+          <li>Early access to new features</li>
+          <li>Founding member status</li>
+        </ul>
+        <a href="mailto:harriskevint@gmail.com?subject=ShadesCaddie Annual" class="price-btn light">Get Annual</a>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- FAQ -->
-<section class="faq">
-  <div class="section-header">
-    <div class="section-tag">Questions</div>
-    <h2 class="section-title">Frequently asked</h2>
+<section class="faq-section" id="faq">
+  <div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;">
+    <div>
+      <div class="section-label">Questions</div>
+      <h2 class="section-title">Frequently asked</h2>
+      <p style="color:var(--gray);margin-top:16px;font-size:0.95rem;line-height:1.7;">Can't find your answer? Email us at <a href="mailto:harriskevint@gmail.com" style="color:var(--green);">harriskevint@gmail.com</a></p>
+    </div>
+    <div class="faq-wrap">
+      <div class="faq-item">
+        <div class="faq-q">Which glasses work with ShadesCaddie? <span class="toggle">+</span></div>
+        <div class="faq-a">ShadesCaddie works with Meta Ray-Ban Display glasses ($799) for the full visual HUD, and Oakley Meta HSTN glasses ($479) for voice caddy through the open-ear speakers. Both are available at Best Buy, Meta.com, and Oakley.com.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Do I need my phone on the course? <span class="toggle">+</span></div>
+        <div class="faq-a">Your phone stays in your pocket. ShadesCaddie uses your phone's GPS to calculate distances and delivers them through your glasses. No screen watching required.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">How accurate are the yardages? <span class="toggle">+</span></div>
+        <div class="faq-a">Outdoor GPS accuracy is typically 3-5 yards, well within the tolerance needed for club selection. Course data is verified against official scorecards and satellite imagery.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Is my course available? <span class="toggle">+</span></div>
+        <div class="faq-a">The free tier includes your mapped home course. Premium subscribers get access to thousands of courses. If yours isn't in our database, email us — we'll add it.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Is ShadesCaddie an official Meta product? <span class="toggle">+</span></div>
+        <div class="faq-a">ShadesCaddie is an independent app built on Meta's Web Apps platform. We are a registered developer in the Meta Wearables Developer Center. Not affiliated with Meta, Ray-Ban, or Oakley.</div>
+      </div>
+    </div>
   </div>
-  <div class="faq-item">
-    <div class="faq-question">Which glasses work with ShadesCaddie?</div>
-    <div class="faq-answer">ShadesCaddie works with Meta Ray-Ban Display glasses ($799) for the full visual HUD experience, and with Oakley Meta HSTN glasses ($399) for voice caddy through the built-in speakers. Both are available at Best Buy, Meta.com, and Oakley.com.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-question">Do I need my phone on the course?</div>
-    <div class="faq-answer">Your phone stays in your pocket. ShadesCaddie uses your phone's GPS to calculate distances. For Oakley Meta users, yardages are spoken through the glasses. For Display glasses users, yardages appear on the lens. Either way, no looking at a screen.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-question">How accurate are the yardages?</div>
-    <div class="faq-answer">Outdoor GPS accuracy is typically 3-5 meters (3-5 yards), well within the tolerance needed for club selection. Course data is verified against official scorecards and satellite imagery.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-question">Does it work at my home course?</div>
-    <div class="faq-answer">The free tier includes your home course. Premium subscribers get access to thousands of courses via our course data API. If your course isn't in our database, we can add it — reach out and we'll get it mapped.</div>
-  </div>
-  <div class="faq-item">
-    <div class="faq-question">Is ShadesCaddie an official Meta product?</div>
-    <div class="faq-answer">ShadesCaddie is an independent developer product built on Meta's Web Apps platform. We are a registered developer in the Meta Wearables Developer Center. Not affiliated with Meta, Ray-Ban, or Oakley.</div>
-  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section class="cta-banner">
+  <h2>Ready to play smarter?</h2>
+  <p>Join golfers who've stopped looking at their phones and started looking at the fairway.</p>
+  <a href="mailto:harriskevint@gmail.com?subject=ShadesCaddie Early Access" class="btn-green">Get Early Access — It's Free</a>
 </section>
 
 <!-- FOOTER -->
@@ -578,9 +464,9 @@ footer {
 </footer>
 
 <script>
-// FAQ accordion
 document.querySelectorAll('.faq-item').forEach(item => {
-  item.querySelector('.faq-question').addEventListener('click', () => {
+  item.querySelector('.faq-q').addEventListener('click', () => {
+    document.querySelectorAll('.faq-item').forEach(i => { if (i !== item) i.classList.remove('open'); });
     item.classList.toggle('open');
   });
 });
