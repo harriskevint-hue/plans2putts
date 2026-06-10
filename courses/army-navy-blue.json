@@ -1,1 +1,185 @@
-
+{
+  "course": "Army Navy (Fairfax) \u2014 Blue",
+  "nine": "blue",
+  "tees": {
+    "blue": {
+      "label": "Blue",
+      "total": 3326,
+      "holes": [
+        353,
+        293,
+        155,
+        524,
+        212,
+        560,
+        477,
+        412,
+        340
+      ]
+    },
+    "white": {
+      "label": "White",
+      "total": 3182,
+      "holes": [
+        348,
+        273,
+        137,
+        506,
+        200,
+        550,
+        443,
+        406,
+        319
+      ]
+    },
+    "green": {
+      "label": "Green",
+      "total": 2965,
+      "holes": [
+        320,
+        261,
+        126,
+        472,
+        174,
+        511,
+        410,
+        377,
+        314
+      ]
+    },
+    "red": {
+      "label": "Red",
+      "total": 2588,
+      "holes": [
+        294,
+        237,
+        99,
+        429,
+        147,
+        449,
+        290,
+        347,
+        296
+      ]
+    }
+  },
+  "holes": [
+    {
+      "hole": 1,
+      "par": 4,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    },
+    {
+      "hole": 2,
+      "par": 4,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    },
+    {
+      "hole": 3,
+      "par": 3,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    },
+    {
+      "hole": 4,
+      "par": 5,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    },
+    {
+      "hole": 5,
+      "par": 3,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    },
+    {
+      "hole": 6,
+      "par": 5,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    },
+    {
+      "hole": 7,
+      "par": 4,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    },
+    {
+      "hole": 8,
+      "par": 4,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    },
+    {
+      "hole": 9,
+      "par": 4,
+      "tee": null,
+      "green": {
+        "front": null,
+        "center": null,
+        "back": null
+      },
+      "hazards": [],
+      "dogleg": null,
+      "layups": []
+    }
+  ]
+}
