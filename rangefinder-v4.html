@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ShadesCaddie v4 — Rangefinder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #000000;
+    --primary: #ffffff;
+    --green: #4ade80;
+    --green-dim: #22c55e;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --dim: #6b7280;
+    --dim2: #374151;
+    --accent-bg: rgba(74,222,128,0.08);
+    --accent-border: #4ade80;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; width: 100%; max-width: 600px; max-height: 600px; background: #000; color: var(--primary); overflow: hidden; }
+  body { font-family: 'DM Mono', ui-monospace, monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100%; }
+
+  /* ===== SCREENS ===== */
+  .screen { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  .hidden { display: none !important; }
+
+  /* ===== SELECTION SCREENS ===== */
+  .screen-title { font-family: 'Anton', sans-serif; font-size: 1.4rem; color: var(--green); letter-spacing: 0.1em; margin-bottom: 24px; text-align: center; }
+  .nav-list { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 8px; }
+  .nav-item {
+    width: 100%; padding: 14px 20px; border-radius: 10px;
+    border: 2px solid var(--dim2); color: var(--dim);
+    font-family: 'DM Mono', monospace; font-size: 1rem; font-weight: 500;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; transition: all 0.1s; background: transparent;
+  }
+  .nav-item:focus, .nav-item.focused {
+    border-color: var(--accent-border); color: var(--primary);
+    background: var(--accent-bg); outline: none;
+  }
+  .nav-item.focused { box-shadow: 0 0 0 1px var(--green); }
+  .nav-item .nav-sub { font-size: 0.75rem; color: var(--dim); }
+  .nav-item.focused .nav-sub { color: var(--green-dim); }
+  .screen-hint { font-size: 0.65rem; color: var(--dim2); letter-spacing: 0.12em; margin-top: 20px; text-align: center; }
+
+  /* ===== FOCUSABLE (Meta requirement) ===== */
+  .focusable:focus { outline: 2px solid var(--green); outline-offset: 2px; }
+
+  /* ===== LOADING / ERROR ===== */
+  .state-msg { text-align: center; padding: 40px 20px; }
+  .state-msg h2 { font-family: 'Anton', sans-serif; font-size: 2rem; margin-bottom: 12px; }
+  .state-msg p { font-size: 0.85rem; color: var(--dim); line-height: 1.6; max-width: 280px; margin: 0 auto; }
+  .spinner { width: 40px; height: 40px; border: 3px solid var(--dim2); border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== HUD ===== */
+  #screenHUD { gap: 6px; padding: 12px; }
+  .stroke-bar { text-align: center; padding: 4px 0; }
+  .stroke-label { font-size: 0.6rem; color: var(--dim); letter-spacing: 0.2em; text-transform: uppercase; }
+  .stroke-num { font-family: 'Anton', sans-serif; font-size: 2.2rem; color: var(--amber); display: block; line-height: 1; }
+  .stroke-carry { font-size: 0.65rem; color: var(--dim); letter-spacing: 0.08em; }
+  #screenHUD.focus-mode { background: transparent; }
+
+  /* ===== CLUB OVERLAY ===== */
+  .club-overlay { position: absolute; bottom: 56px; left: 0; right: 0; background: rgba(0,0,0,0.95); border-top: 2px solid var(--green); padding: 10px 16px; text-align: center; z-index: 50; }
+  .club-prompt { font-size: 0.58rem; letter-spacing: 0.2em; color: var(--green); text-transform: uppercase; margin-bottom: 4px; }
+  .club-name { font-family: 'Anton', sans-serif; font-size: 1.8rem; color: var(--primary); line-height: 1; }
+  .club-hint-sm { font-size: 0.55rem; color: var(--dim); letter-spacing: 0.08em; margin-top: 4px; }
+
+  /* ===== SCORECARD OVERLAY ===== */
+  .scorecard-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.97); display: flex; flex-direction: column; align-items: center; padding: 14px 10px; z-index: 100; }
+  .sc-title { font-family: 'Anton', sans-serif; font-size: 1.1rem; color: var(--green); letter-spacing: 0.15em; margin-bottom: 3px; }
+  .sc-course-name { font-size: 0.6rem; color: var(--dim); letter-spacing: 0.05em; margin-bottom: 10px; }
+  .sc-half { width: 100%; margin-bottom: 8px; }
+  .sc-half-label { font-size: 0.55rem; color: var(--dim); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px; }
+  .sc-cells { display: flex; gap: 3px; width: 100%; }
+  .sc-cell { flex: 1; text-align: center; padding: 4px 1px; border-radius: 4px; background: var(--dim2); }
+  .sc-cell .sc-h { font-size: 0.48rem; color: var(--dim); }
+  .sc-cell .sc-s { font-family: 'Anton', sans-serif; font-size: 0.9rem; color: var(--dim); }
+  .sc-cell.played .sc-s { color: var(--primary); }
+  .sc-cell.eagle { background: #4c1d95; } .sc-cell.eagle .sc-s { color: #c4b5fd; }
+  .sc-cell.birdie { background: #14532d; } .sc-cell.birdie .sc-s { color: var(--green); }
+  .sc-cell.bogey { background: #78350f; } .sc-cell.bogey .sc-s { color: var(--amber); }
+  .sc-cell.double { background: #7f1d1d; } .sc-cell.double .sc-s { color: var(--red); }
+  .sc-cell.over { background: #7f1d1d; } .sc-cell.over .sc-s { color: var(--red); }
+  .sc-active { outline: 2px solid var(--green); }
+  .sc-total-row { font-size: 0.85rem; color: var(--primary); margin-top: 6px; text-align: center; }
+  .sc-total-row strong { font-family: 'Anton', sans-serif; font-size: 1.4rem; color: var(--amber); }
+  .sc-close-hint { font-size: 0.55rem; color: var(--dim2); margin-top: 8px; letter-spacing: 0.08em; }
+  .sc-actions { display: flex; gap: 10px; margin-top: 12px; justify-content: center; }
+  .sc-btn { font-family: 'DM Mono', monospace; font-size: 0.72rem; font-weight: 500; padding: 10px 18px; border-radius: 10px; cursor: pointer; letter-spacing: 0.05em; border: 2px solid; }
+  .sc-btn-pdf { background: var(--green); border-color: var(--green); color: #000; }
+  .sc-btn-copy { background: transparent; border-color: var(--dim); color: var(--dim); }
+  .sc-btn-copy.copied { border-color: var(--green); color: var(--green); }
+  .tee-badge { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--dim2); text-transform: uppercase; }
+  .tee-badge span { color: var(--amber); }
+  .hole-bar { display: flex; align-items: center; gap: 12px; width: 100%; justify-content: center; }
+  .hole-bar button {
+    font-family: 'DM Mono', monospace; font-size: 1.2rem; font-weight: 500;
+    background: none; border: 2px solid var(--dim2); color: var(--dim);
+    width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  }
+  .hole-bar button:focus { border-color: var(--green); color: var(--green); outline: none; }
+  .hole-info { text-align: center; }
+  .hole-num { font-family: 'Anton', sans-serif; font-size: 1.5rem; color: var(--green); }
+  .hole-meta { font-size: 0.7rem; color: var(--dim); letter-spacing: 0.1em; }
+  .yardage-wrap { text-align: center; cursor: pointer; }
+  .yardage-label { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; }
+  .yardage { font-family: 'Anton', sans-serif; font-size: min(25vw, 144px); line-height: 1; color: var(--primary); letter-spacing: -0.02em; }
+  .yardage-unit { font-size: 0.65rem; letter-spacing: 0.15em; color: var(--dim); text-transform: uppercase; }
+  .tap-hint { font-size: 0.58rem; color: var(--dim2); letter-spacing: 0.08em; }
+  .tap-hint.speaking { color: var(--green); }
+  .fb-row { display: flex; gap: 24px; justify-content: center; padding: 5px 0; border-top: 1px solid var(--dim2); border-bottom: 1px solid var(--dim2); width: 80%; max-width: 300px; }
+  .fb-item { text-align: center; }
+  .fb-label { font-size: 0.58rem; letter-spacing: 0.1em; color: var(--dim); text-transform: uppercase; }
+  .fb-val { font-family: 'Anton', sans-serif; font-size: 1.8rem; color: var(--green); }
+  .official-yd { font-size: 0.6rem; color: var(--dim2); text-align: center; letter-spacing: 0.05em; }
+  .extra-row { display: flex; gap: 20px; justify-content: center; }
+  .extra-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; }
+  .dot-dg { width: 7px; height: 7px; border-radius: 50%; background: #facc15; }
+  .dot-lu { width: 7px; height: 7px; border-radius: 50%; background: #a78bfa; }
+  .extra-dist { font-family: 'Anton', sans-serif; font-size: 0.95rem; }
+  .extra-label { color: var(--dim); font-size: 0.58rem; text-transform: uppercase; }
+  .hazards { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 3px; }
+  .hz-row { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; padding: 3px 10px; }
+  .hz-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); flex: none; }
+  .hz-name { flex: 1; color: var(--dim); font-size: 0.65rem; }
+  .hz-dist { font-family: 'Anton', sans-serif; font-size: 1rem; color: var(--amber); }
+  .hole-dots { display: flex; gap: 4px; justify-content: center; }
+  .hdot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim2); }
+  .hdot.done { background: var(--dim); }
+  .hdot.active { background: var(--green); box-shadow: 0 0 6px rgba(74,222,128,0.5); }
+  .bottom-bar { display: flex; align-items: center; justify-content: center; gap: 16px; width: 100%; }
+  .gps-status { font-size: 0.58rem; color: var(--dim); letter-spacing: 0.08em; }
+  .gps-status.good { color: var(--green-dim); }
+  .gps-status.warn { color: var(--amber); }
+  .gps-status.bad { color: var(--red); }
+  .icon-btn {
+    font-family: inherit; font-size: 1rem; background: none; border: 1px solid var(--dim2);
+    color: var(--dim); width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+  }
+  .icon-btn.on { border-color: var(--green-dim); color: var(--green); }
+  .icon-btn.focusable:focus { outline: 2px solid var(--green); }
+</style>
+</head>
+<body>
+
+  <div id="stateLoading" class="screen state-msg">
+    <div class="spinner"></div>
+    <h2>Acquiring GPS</h2>
+    <p>Stand outside. Allow location when prompted.</p>
+  </div>
+
+  <div id="stateError" class="screen state-msg hidden">
+    <h2 id="errTitle">GPS Error</h2>
+    <p id="errMsg"></p>
+    <p style="margin-top:16px;font-size:0.75rem;color:#4ade80;">Retrying automatically...</p>
+  </div>
+
+  <!-- Course Selection -->
+  <div id="screenCourse" class="screen hidden">
+    <div class="screen-title">Select Course</div>
+    <div class="nav-list" id="courseList"></div>
+    <div class="screen-hint">&#x2191;&#x2193; navigate &nbsp;&middot;&nbsp; Enter / pinch to select</div>
+  <div id="screenHoles" class="screen hidden">
+    <h2 class="screen-title">How many holes?</h2>
+    <div class="nav-list" id="holesList"></div>
+  </div>
+  <div id="screenFinish" class="screen hidden">
+    <h2 class="screen-title">Finishing nine</h2>
+    <div class="nav-list" id="finishList"></div>
+  </div>
+  </div>
+
+  <!-- Tee Selection -->
+  <div id="screenTee" class="screen hidden">
+    <div class="screen-title">Select Tees</div>
+    <div class="nav-list" id="teeList"></div>
+    <div class="screen-hint">&#x2191;&#x2193; navigate &nbsp;&middot;&nbsp; Enter / pinch to select</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="screenHUD" class="screen hidden">
+    <div class="tee-badge" id="teeBadge"></div>
+    <div class="hole-bar">
+      <button class="focusable" id="prevBtn" tabindex="0" aria-label="Previous hole">&#8249;</button>
+      <div class="hole-info" role="heading" aria-level="1">
+        <div class="hole-num" id="holeNum">HOLE 1</div>
+        <div class="hole-meta" id="holeMeta">Par 4</div>
+      </div>
+      <button class="focusable" id="nextBtn" tabindex="0" aria-label="Next hole">&#8250;</button>
+    </div>
+    <div class="stroke-bar focusable" id="strokeBar" tabindex="0" aria-label="0 strokes">
+      <span class="stroke-label">strokes</span>
+      <span class="stroke-num" id="strokeNum" aria-hidden="true">0</span>
+      <span class="stroke-carry" id="strokeCarry" aria-hidden="true"></span>
+    </div>
+    <div class="yardage-wrap focusable" id="yardageTap" tabindex="0" aria-label="Yardage" role="button">
+      <div class="yardage-label" aria-hidden="true">to center</div>
+      <div class="yardage" id="yardCenter" aria-hidden="true">---</div>
+      <div class="yardage-unit" aria-hidden="true" role="presentation">yards</div>
+    </div>
+    <div aria-live="polite" aria-atomic="true" id="liveRegion" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
+    <div class="fb-row" aria-hidden="true">
+      <div class="fb-item"><div class="fb-label">Front</div><div class="fb-val" id="yardFront">--</div></div>
+      <div class="fb-item"><div class="fb-label">Back</div><div class="fb-val" id="yardBack">--</div></div>
+    </div>
+    <div class="official-yd" id="officialYd"></div>
+    <div class="extra-row" id="extraRow"></div>
+    <div class="hazards" id="hazardList"></div>
+    <div class="hole-dots" id="holeDots"></div>
+    <div class="bottom-bar">
+      <button class="icon-btn focusable" id="courseBtn" tabindex="0" title="Change course">&#127922;</button>
+      <div class="gps-status" id="gpsStatus">GPS: acquiring...</div>
+      <button class="icon-btn focusable" id="cardBtn" tabindex="0" title="Scorecard">&#128203;</button>
+      <button class="icon-btn on focusable" id="muteBtn" tabindex="0" title="Toggle voice">&#x1f50a;</button>
+    </div>
+    <!-- Club Tag Overlay -->
+    <div id="clubOverlay" class="club-overlay hidden">
+      <div class="club-prompt">Tag Club</div>
+      <div class="club-name" id="clubName">7 Iron</div>
+      <div class="club-hint-sm">&#x2191;&#x2193; change &nbsp;&middot;&nbsp; Enter save &nbsp;&middot;&nbsp; &#x2190; skip</div>
+    </div>
+    <!-- Scorecard Overlay -->
+    <div id="scorecardOverlay" class="scorecard-overlay hidden">
+      <div class="sc-title">SCORECARD</div>
+      <div class="sc-course-name" id="scCourseName"></div>
+      <div class="sc-half">
+        <div class="sc-half-label">Front 9</div>
+        <div class="sc-cells" id="scFront"></div>
+      </div>
+      <div class="sc-half">
+        <div class="sc-half-label">Back 9</div>
+        <div class="sc-cells" id="scBack"></div>
+      </div>
+      <div class="sc-total-row" id="scTotal"></div>
+      <div class="sc-actions">
+        <button class="sc-btn sc-btn-pdf" id="scDownloadBtn">&#x2913; Download PDF</button>
+        <button class="sc-btn sc-btn-copy" id="scCopyBtn">&#128203; Copy</button>
+      </div>
+      <div class="sc-close-hint">Any gesture to close</div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ===== COURSE DATA =====
+  var COURSES = {
+    "white-horse": {
+      course: "White Horse Golf Club",
+      tees: {
+        green: { label: "Green", total: 7080, holes: [393,438,538,215,410,169,445,567,465,401,357,364,206,560,366,569,182,435] },
+        black: { label: "Black", total: 6687, holes: [364,409,506,197,380,156,425,535,435,376,328,364,185,550,337,551,168,421] },
+        blue:  { label: "Blue",  total: 6197, holes: [327,382,480,176,352,144,408,494,427,341,304,343,176,500,315,504,139,385] },
+        white: { label: "White", total: 5532, holes: [313,346,417,145,316,116,294,450,399,309,289,319,152,448,289,451,125,354] },
+        gold:  { label: "Gold",  total: 5006, holes: [267,327,381,122,295,100,283,423,362,287,235,269,132,416,273,418,99,317] }
+      },
+      holes: [
+        {"hole":1,"par":4,"tee":{"lat":47.768034,"lng":-122.532291},"green":{"front":{"lat":47.76899,"lng":-122.535705},"center":{"lat":47.769026,"lng":-122.535812},"back":{"lat":47.769074,"lng":-122.535946}},"hazards":[{"label":"hazard 1","lat":47.768168,"lng":-122.532596},{"label":"hazard 2","lat":47.768413,"lng":-122.533498},{"label":"hazard 3","lat":47.768582,"lng":-122.533916},{"label":"hazard 4","lat":47.768845,"lng":-122.534643},{"label":"hazard 5","lat":47.768935,"lng":-122.535987}],"dogleg":null,"layups":[]},
+        {"hole":2,"par":4,"tee":{"lat":47.76944,"lng":-122.536786},"green":{"front":{"lat":47.772029,"lng":-122.536842},"center":{"lat":47.772102,"lng":-122.536789},"back":{"lat":47.772176,"lng":-122.536703}},"hazards":[{"label":"hazard 1","lat":47.771186,"lng":-122.536743},{"label":"hazard 2","lat":47.771902,"lng":-122.5367},{"label":"hazard 3","lat":47.772286,"lng":-122.536786}],"dogleg":null,"layups":[]},
+        {"hole":3,"par":5,"tee":{"lat":47.771511,"lng":-122.539111},"green":{"front":{"lat":47.768334,"lng":-122.538969},"center":{"lat":47.768207,"lng":-122.53894},"back":{"lat":47.768096,"lng":-122.538924}},"hazards":[{"label":"hazard 1","lat":47.769934,"lng":-122.539428},{"label":"hazard 2","lat":47.76911,"lng":-122.539685},{"label":"hazard 3","lat":47.768598,"lng":-122.539079},{"label":"hazard 4","lat":47.768097,"lng":-122.538744}],"dogleg":null,"layups":[]},
+        {"hole":4,"par":3,"tee":{"lat":47.767731,"lng":-122.53939},"green":{"front":{"lat":47.766848,"lng":-122.537908},"center":{"lat":47.766712,"lng":-122.537806},"back":{"lat":47.76655,"lng":-122.53771}},"hazards":[{"label":"hazard 1","lat":47.766766,"lng":-122.53806},{"label":"hazard 2","lat":47.766622,"lng":-122.538038}],"dogleg":null,"layups":[]},
+        {"hole":5,"par":4,"tee":{"lat":47.766717,"lng":-122.535721},"green":{"front":{"lat":47.764358,"lng":-122.534359},"center":{"lat":47.764244,"lng":-122.534224},"back":{"lat":47.764103,"lng":-122.534171}},"hazards":[{"label":"hazard 1","lat":47.76619,"lng":-122.535324},{"label":"hazard 2","lat":47.764971,"lng":-122.534455},{"label":"hazard 3","lat":47.764325,"lng":-122.534058}],"dogleg":null,"layups":[]},
+        {"hole":6,"par":3,"tee":{"lat":47.763398,"lng":-122.534493},"green":{"front":{"lat":47.762775,"lng":-122.533524},"center":{"lat":47.762663,"lng":-122.533487},"back":{"lat":47.76255,"lng":-122.533377}},"hazards":[{"label":"hazard 1","lat":47.762946,"lng":-122.534195},{"label":"hazard 2","lat":47.762683,"lng":-122.533927},{"label":"hazard 3","lat":47.762487,"lng":-122.53361},{"label":"hazard 4","lat":47.762683,"lng":-122.533299}],"dogleg":null,"layups":[]},
+        {"hole":7,"par":4,"tee":{"lat":47.75998,"lng":-122.531781},"green":{"front":{"lat":47.75801,"lng":-122.532341},"center":{"lat":47.757918,"lng":-122.532382},"back":{"lat":47.757831,"lng":-122.532427}},"hazards":[{"label":"hazard 1","lat":47.75889,"lng":-122.5325},{"label":"hazard 2","lat":47.758008,"lng":-122.532513}],"dogleg":null,"layups":[]},
+        {"hole":8,"par":5,"tee":{"lat":47.759135,"lng":-122.534884},"green":{"front":{"lat":47.761898,"lng":-122.533986},"center":{"lat":47.761956,"lng":-122.53387},"back":{"lat":47.762084,"lng":-122.533838}},"hazards":[{"label":"hazard 1","lat":47.759595,"lng":-122.534316},{"label":"hazard 2","lat":47.761565,"lng":-122.534479},{"label":"hazard 3","lat":47.761806,"lng":-122.533835},{"label":"hazard 4","lat":47.761841,"lng":-122.534063}],"dogleg":null,"layups":[]},
+        {"hole":9,"par":4,"tee":{"lat":47.764556,"lng":-122.531671},"green":{"front":{"lat":47.767429,"lng":-122.532293},"center":{"lat":47.767527,"lng":-122.53232},"back":{"lat":47.767624,"lng":-122.532406}},"hazards":[{"label":"hazard 1","lat":47.766406,"lng":-122.532197},{"label":"hazard 2","lat":47.767736,"lng":-122.532358}],"dogleg":null,"layups":[]},
+        {"hole":10,"par":4,"tee":{"lat":47.768054,"lng":-122.530727},"green":{"front":{"lat":47.766042,"lng":-122.529509},"center":{"lat":47.766078,"lng":-122.529155},"back":{"lat":47.76615,"lng":-122.528983}},"hazards":[{"label":"hazard 1","lat":47.766561,"lng":-122.530475},{"label":"hazard 2","lat":47.766416,"lng":-122.531193},{"label":"hazard 3","lat":47.766143,"lng":-122.529407}],"dogleg":{"lat":47.766532,"lng":-122.53078},"layups":[{"label":"layup 1","lat":47.766438,"lng":-122.530829}]},
+        {"hole":11,"par":4,"tee":{"lat":47.76744,"lng":-122.528479},"green":{"front":{"lat":47.767403,"lng":-122.525657},"center":{"lat":47.767335,"lng":-122.525521},"back":{"lat":47.767238,"lng":-122.525446}},"hazards":[{"label":"hazard 1","lat":47.767303,"lng":-122.526113},{"label":"hazard 2","lat":47.767332,"lng":-122.525808},{"label":"hazard 3","lat":47.767617,"lng":-122.526231}],"dogleg":null,"layups":[]},
+        {"hole":12,"par":4,"tee":{"lat":47.768749,"lng":-122.523125},"green":{"front":{"lat":47.770429,"lng":-122.523109},"center":{"lat":47.770548,"lng":-122.522981},"back":{"lat":47.770675,"lng":-122.522857}},"hazards":[{"label":"hazard 1","lat":47.769925,"lng":-122.522884}],"dogleg":null,"layups":[]},
+        {"hole":13,"par":3,"tee":{"lat":47.771111,"lng":-122.523023},"green":{"front":{"lat":47.772159,"lng":-122.52238},"center":{"lat":47.772268,"lng":-122.522358},"back":{"lat":47.772366,"lng":-122.522294}},"hazards":[{"label":"hazard 1","lat":47.772188,"lng":-122.522192},{"label":"hazard 2","lat":47.772138,"lng":-122.522546},{"label":"hazard 3","lat":47.772433,"lng":-122.522466}],"dogleg":null,"layups":[]},
+        {"hole":14,"par":5,"tee":{"lat":47.771464,"lng":-122.521768},"green":{"front":{"lat":47.768,"lng":-122.522466},"center":{"lat":47.767913,"lng":-122.522535},"back":{"lat":47.767856,"lng":-122.522621}},"hazards":[{"label":"hazard 1","lat":47.768767,"lng":-122.522026},{"label":"hazard 2","lat":47.768231,"lng":-122.522444},{"label":"hazard 3","lat":47.767928,"lng":-122.522305},{"label":"hazard 4","lat":47.767758,"lng":-122.522605}],"dogleg":null,"layups":[]},
+        {"hole":15,"par":4,"tee":{"lat":47.767917,"lng":-122.525609},"green":{"front":{"lat":47.769125,"lng":-122.528222},"center":{"lat":47.769255,"lng":-122.528232},"back":{"lat":47.769429,"lng":-122.528262}},"hazards":[{"label":"hazard 1","lat":47.768481,"lng":-122.526854},{"label":"hazard 2","lat":47.769033,"lng":-122.527707},{"label":"hazard 3","lat":47.769157,"lng":-122.528007},{"label":"hazard 4","lat":47.769335,"lng":-122.528063},{"label":"hazard 5","lat":47.769469,"lng":-122.528262}],"dogleg":null,"layups":[]},
+        {"hole":16,"par":5,"tee":{"lat":47.770686,"lng":-122.530764},"green":{"front":{"lat":47.772034,"lng":-122.535008},"center":{"lat":47.772059,"lng":-122.535147},"back":{"lat":47.772111,"lng":-122.535295}},"hazards":[{"label":"hazard 1","lat":47.770861,"lng":-122.531118},{"label":"hazard 2","lat":47.770963,"lng":-122.531601},{"label":"hazard 3","lat":47.771423,"lng":-122.531781},{"label":"hazard 4","lat":47.771461,"lng":-122.532138},{"label":"hazard 5","lat":47.771266,"lng":-122.532441},{"label":"hazard 6","lat":47.771855,"lng":-122.534409},{"label":"hazard 7","lat":47.771956,"lng":-122.534946},{"label":"hazard 8","lat":47.7722,"lng":-122.535203}],"dogleg":null,"layups":[]},
+        {"hole":17,"par":3,"tee":{"lat":47.771648,"lng":-122.535968},"green":{"front":{"lat":47.770668,"lng":-122.536097},"center":{"lat":47.770527,"lng":-122.536059},"back":{"lat":47.770397,"lng":-122.535992}},"hazards":[{"label":"hazard 1","lat":47.770714,"lng":-122.535946},{"label":"hazard 2","lat":47.770581,"lng":-122.535893},{"label":"hazard 3","lat":47.770368,"lng":-122.536139}],"dogleg":null,"layups":[]},
+        {"hole":18,"par":4,"tee":{"lat":47.769923,"lng":-122.535844},"green":{"front":{"lat":47.768746,"lng":-122.531746},"center":{"lat":47.768809,"lng":-122.531569},"back":{"lat":47.768894,"lng":-122.531269}},"hazards":[{"label":"hazard 1","lat":47.769465,"lng":-122.533532},{"label":"hazard 2","lat":47.769258,"lng":-122.532886},{"label":"hazard 3","lat":47.769017,"lng":-122.532304},{"label":"hazard 4","lat":47.768716,"lng":-122.533347},{"label":"hazard 5","lat":47.768723,"lng":-122.533208},{"label":"hazard 6","lat":47.76871,"lng":-122.533063},{"label":"hazard 7","lat":47.768703,"lng":-122.531419},{"label":"hazard 8","lat":47.768768,"lng":-122.531325}],"dogleg":null,"layups":[]}
+      ]
+    }
+  };
+
+  var AVAILABLE_COURSES = [
+    { key: "white-horse", name: "White Horse Golf Club", holes: 18, sub: "Kingston, WA", type: "full" }
+  ];
+
+  // Nine-hole building blocks (Army Navy Fairfax). Each maps ONCE; combos assemble at runtime.
+  var NINES = [
+    { key: "army-navy-blue",  name: "Army Navy \u2014 Blue",  sub: "Fairfax, VA",
+      url: "courses/army-navy-blue.json" },
+    { key: "army-navy-red",   name: "Army Navy \u2014 Red",   sub: "Fairfax, VA",
+      url: "courses/army-navy-red.json" },
+    { key: "army-navy-white", name: "Army Navy \u2014 White", sub: "Fairfax, VA",
+      url: "courses/army-navy-white.json" }
+  ];
+  var ninesCache = {};   // key -> loaded nine JSON
+  var pendingStartNine = null;
+
+  // ===== STATE =====
+  var activeCourse = null;
+  var selectedTeeKey = null;
+  var currentHole = 0;
+  var playerLat = null, playerLng = null, gpsAcc = null;
+  var voiceOn = true;
+  var lastSpokenHole = -1;
+  var currentScreen = "course";
+  var listFocusIdx = 0;
+  var teeKeys = [];
+  // Stroke tracking
+  var CLUBS = ["Driver","3 Wood","5 Wood","Hybrid","4 Iron","5 Iron","6 Iron","7 Iron","8 Iron","9 Iron","Pitching W","Gap W","Sand W","Lob W","Putter"];
+  var shots = []; // { hole, num, lat, lng, carry, club }
+  var currentStrokes = 0;
+  var holeScores = [];
+  for (var i = 0; i < 18; i++) holeScores.push(null);
+  var lastCarry = null;
+  var lastClubIdx = 7; // default: 7 Iron
+  var clubSelecting = false;
+  var clubIdx = 7;
+  // Focus mode
+  var focusTimer = null;
+  var FOCUS_DELAY = 25000;
+  // Storage keys
+  var ROUND_KEY = "p2p_current_round";
+  var HISTORY_KEY = "p2p_history";
+
+  // ===== LOCAL STORAGE =====
+  function saveRound() {
+    try {
+      var state = {
+        date: new Date().toDateString(),
+        course: activeCourse ? activeCourse.course : null,
+        tee: selectedTeeKey,
+        hole: currentHole,
+        strokes: currentStrokes,
+        scores: holeScores,
+        shots: shots
+      };
+      localStorage.setItem(ROUND_KEY, JSON.stringify(state));
+    } catch(e) {}
+  }
+
+  function loadSavedRound() {
+    try {
+      var raw = localStorage.getItem(ROUND_KEY);
+      if (!raw) return null;
+      var state = JSON.parse(raw);
+      if (state.date !== new Date().toDateString()) { localStorage.removeItem(ROUND_KEY); return null; }
+      return state;
+    } catch(e) { return null; }
+  }
+
+  function saveToHistory(roundData) {
+    try {
+      var history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      history.unshift(roundData);
+      if (history.length > 20) history = history.slice(0, 20);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } catch(e) {}
+  }
+
+  function clearRound() {
+    try { localStorage.removeItem(ROUND_KEY); } catch(e) {}
+    currentStrokes = 0; shots = [];
+    holeScores = [];
+    for (var j = 0; j < 18; j++) holeScores.push(null);
+    lastCarry = null;
+    el.strokeNum.textContent = 0; el.strokeCarry.textContent = "";
+  }
+
+  // ===== DOM =====
+  var el = {
+    loading: document.getElementById("stateLoading"),
+    error: document.getElementById("stateError"),
+    errTitle: document.getElementById("errTitle"),
+    errMsg: document.getElementById("errMsg"),
+    retryBtn: document.getElementById("retryBtn"),
+    screenCourse: document.getElementById("screenCourse"),
+    screenTee: document.getElementById("screenTee"),
+    screenHUD: document.getElementById("screenHUD"),
+    courseList: document.getElementById("courseList"),
+    screenHoles: document.getElementById("screenHoles"),
+    holesList: document.getElementById("holesList"),
+    screenFinish: document.getElementById("screenFinish"),
+    finishList: document.getElementById("finishList"),
+    teeList: document.getElementById("teeList"),
+    teeBadge: document.getElementById("teeBadge"),
+    holeNum: document.getElementById("holeNum"),
+    holeMeta: document.getElementById("holeMeta"),
+    yardCenter: document.getElementById("yardCenter"),
+    yardFront: document.getElementById("yardFront"),
+    yardBack: document.getElementById("yardBack"),
+    officialYd: document.getElementById("officialYd"),
+    extraRow: document.getElementById("extraRow"),
+    hazardList: document.getElementById("hazardList"),
+    holeDots: document.getElementById("holeDots"),
+    gpsStatus: document.getElementById("gpsStatus"),
+    prevBtn: document.getElementById("prevBtn"),
+    nextBtn: document.getElementById("nextBtn"),
+    yardageTap: document.getElementById("yardageTap"),
+    liveRegion: document.getElementById("liveRegion"),
+    strokeBar: document.getElementById("strokeBar"),
+    strokeNum: document.getElementById("strokeNum"),
+    strokeCarry: document.getElementById("strokeCarry"),
+    clubOverlay: document.getElementById("clubOverlay"),
+    clubName: document.getElementById("clubName"),
+    scorecardOverlay: document.getElementById("scorecardOverlay"),
+    scCourseName: document.getElementById("scCourseName"),
+    scFront: document.getElementById("scFront"),
+    scBack: document.getElementById("scBack"),
+    scTotal: document.getElementById("scTotal"),
+    scDownloadBtn: document.getElementById("scDownloadBtn"),
+    scCopyBtn: document.getElementById("scCopyBtn"),
+    muteBtn: document.getElementById("muteBtn"),
+    courseBtn: document.getElementById("courseBtn")
+  };
+
+  // ===== SCREEN MANAGEMENT =====
+  function showScreen(name) {
+    currentScreen = name;
+    el.loading.classList.add("hidden");
+    el.error.classList.add("hidden");
+    el.screenCourse.classList.add("hidden");
+    el.screenTee.classList.add("hidden");
+    el.screenHUD.classList.add("hidden");
+    if (el.screenHoles) el.screenHoles.classList.add("hidden");
+    if (el.screenFinish) el.screenFinish.classList.add("hidden");
+    if (name === "course") {
+      el.screenCourse.classList.remove("hidden"); buildCourseList();
+    }
+    else if (name === "holes") { el.screenHoles.classList.remove("hidden"); buildHolesChoice(); }
+    else if (name === "finish") { el.screenFinish.classList.remove("hidden"); buildFinishList(); }
+    else if (name === "tee") { el.screenTee.classList.remove("hidden"); buildTeeList(); }
+    else if (name === "hud") { el.screenHUD.classList.remove("hidden"); updateHUD(); setTimeout(speakHUD, 800); showHUDDisplay(); }
+  }
+
+  // ===== COURSE SELECTION =====
+  function buildCourseList() {
+    el.courseList.innerHTML = "";
+    listFocusIdx = 0;
+    selectItems = [];
+    AVAILABLE_COURSES.forEach(function (c) {
+      selectItems.push({ kind: "full", key: c.key, name: c.name, sub: c.holes + " holes \u00b7 " + c.sub });
+    });
+    NINES.forEach(function (n) {
+      selectItems.push({ kind: "nine", key: n.key, name: n.name, sub: "9 holes \u00b7 " + n.sub });
+    });
+    selectItems.forEach(function (it, idx) {
+      var btn = document.createElement("button");
+      btn.className = "nav-item focusable" + (idx === 0 ? " focused" : "");
+      btn.tabIndex = 0;
+      btn.innerHTML = '<span>' + it.name + '</span><span class="nav-sub">' + it.sub + '</span>';
+      btn.onclick = function () { chooseCourseItem(idx); };
+      el.courseList.appendChild(btn);
+    });
+    focusList("courseList", 0);
+    speak("Select a course. " + selectItems[0].name);
+  }
+
+  var selectItems = [];
+
+  function chooseCourseItem(idx) {
+    var it = selectItems[idx];
+    if (!it) return;
+    if (it.kind === "full") { selectFullCourse(it.key); }
+    else { pendingStartNine = it.key; showScreen("holes"); }
+  }
+
+  function selectFullCourse(key) {
+    activateCourse(key);
+  }
+
+  function loadNine(key, cb) {
+    if (ninesCache[key]) { cb(ninesCache[key]); return; }
+    var def = null; for (var i=0;i<NINES.length;i++){ if (NINES[i].key===key) def=NINES[i]; }
+    if (!def) { showError("Unknown nine."); return; }
+    fetch(def.url).then(function(r){ return r.json(); }).then(function(data){
+      ninesCache[key] = data; cb(data);
+    }).catch(function(){ showError("Could not load " + def.name + ". It may not be mapped yet."); });
+  }
+
+  // Build the "how many holes" screen
+  function buildHolesChoice() {
+    el.holesList.innerHTML = "";
+    var startDef = null; for (var i=0;i<NINES.length;i++){ if (NINES[i].key===pendingStartNine) startDef=NINES[i]; }
+    holesChoiceItems = [{ label: "Just these 9", action: "nine9" },
+                        { label: "Add a second nine (18)", action: "nine18" }];
+    holesChoiceItems.forEach(function (it, idx) {
+      var btn = document.createElement("button");
+      btn.className = "nav-item focusable" + (idx === 0 ? " focused" : "");
+      btn.tabIndex = 0;
+      btn.innerHTML = '<span>' + it.label + '</span>';
+      btn.onclick = function () { chooseHolesItem(idx); };
+      el.holesList.appendChild(btn);
+    });
+    focusList("holesList", 0);
+    speak((startDef ? startDef.name + ". " : "") + "Play just these nine, or add a second nine for eighteen?");
+  }
+  var holesChoiceItems = [];
+  function chooseHolesItem(idx) {
+    var it = holesChoiceItems[idx]; if (!it) return;
+    if (it.action === "nine9") { assembleAndStart(pendingStartNine, null); }
+    else { showScreen("finish"); }
+  }
+
+  // Build finishing-nine screen
+  function buildFinishList() {
+    el.finishList.innerHTML = "";
+    finishItems = NINES.slice();
+    finishItems.forEach(function (n, idx) {
+      var btn = document.createElement("button");
+      btn.className = "nav-item focusable" + (idx === 0 ? " focused" : "");
+      btn.tabIndex = 0;
+      btn.innerHTML = '<span>' + n.name + '</span><span class="nav-sub">9 holes &middot; ' + n.sub + '</span>';
+      btn.onclick = function () { assembleAndStart(pendingStartNine, n.key); };
+      el.finishList.appendChild(btn);
+    });
+    focusList("finishList", 0);
+    speak("Select your finishing nine. " + finishItems[0].name);
+  }
+  var finishItems = [];
+
+  // Assemble a playable course from one or two nines, then go to tees.
+  function assembleAndStart(startKey, finishKey) {
+    loadNine(startKey, function (startData) {
+      function finalize(finishData) {
+        var holes = startData.holes.map(cloneHole);
+        var tees = mergeTees(startData.tees, finishData ? finishData.tees : null, !!finishData);
+        var name = startData.course;
+        if (finishData) {
+          var off = holes.length;
+          finishData.holes.forEach(function (h, i) {
+            var c = cloneHole(h); c.hole = off + i + 1; holes.push(c);
+          });
+          name = niceName(startKey) + " / " + niceName(finishKey);
+        } else {
+          name = niceName(startKey) + " (9)";
+        }
+        var assembled = { course: name, tees: tees, holes: holes };
+        COURSES["__assembled__"] = assembled;
+        activateCourse("__assembled__");
+      }
+      if (finishKey) { loadNine(finishKey, finalize); } else { finalize(null); }
+    });
+  }
+  function cloneHole(h){ return JSON.parse(JSON.stringify(h)); }
+  function niceName(key){ for (var i=0;i<NINES.length;i++){ if(NINES[i].key===key) return NINES[i].name; } return key; }
+  // Merge per-tee yardage arrays from two nines (concatenate); single nine just copies.
+  function mergeTees(a, b, combine) {
+    if (!a) return null;
+    var out = {};
+    Object.keys(a).forEach(function (k) {
+      out[k] = { label: a[k].label, total: a[k].total, holes: a[k].holes.slice() };
+    });
+    if (combine && b) {
+      Object.keys(out).forEach(function (k) {
+        if (b[k]) {
+          out[k].holes = out[k].holes.concat(b[k].holes);
+          out[k].total = out[k].total + b[k].total;
+        }
+      });
+    }
+    return out;
+  }
+
+  // selectCourse() removed in v4 (replaced by nine-based flow)
+
+  function activateCourse(key) {
+    var courseDef = null;
+    for (var i = 0; i < AVAILABLE_COURSES.length; i++) { if (AVAILABLE_COURSES[i].key === key) { courseDef = AVAILABLE_COURSES[i]; break; } }
+    activeCourse = COURSES[key];
+    // Merge tees from course definition if not in the loaded data
+    if (courseDef && courseDef.tees && !activeCourse.tees) activeCourse.tees = courseDef.tees;
+    if (activeCourse.tees) { showScreen("tee"); }
+    else { selectedTeeKey = null; showScreen("hud"); speak("Starting round at " + activeCourse.course); }
+  }
+
+  // ===== TEE SELECTION =====
+  function buildTeeList() {
+    el.teeList.innerHTML = "";
+    listFocusIdx = 0;
+    var tees = activeCourse.tees;
+    teeKeys = Object.keys(tees); var keys = teeKeys;
+    var skipBtn = document.createElement("button");
+    skipBtn.className = "nav-item focusable";
+    skipBtn.tabIndex = 0;
+    skipBtn.innerHTML = '<span>GPS Distance Only</span><span class="nav-sub">no official yardage</span>';
+    skipBtn.onclick = function () { selectedTeeKey = null; showScreen("hud"); speak("Starting round. GPS only."); };
+    el.teeList.appendChild(skipBtn);
+    keys.forEach(function (key) {
+      var t = tees[key];
+      var btn = document.createElement("button");
+      btn.className = "nav-item focusable";
+      btn.tabIndex = 0;
+      btn.innerHTML = '<span>' + t.label + ' Tees</span><span class="nav-sub">' + t.total.toLocaleString() + ' yd total</span>';
+      btn.onclick = (function (k) { return function () { selectedTeeKey = k; showScreen("hud"); speak(tees[k].label + " tees selected."); }; })(key);
+      el.teeList.appendChild(btn);
+    });
+    setTimeout(function () { focusList("teeList", 0); speak("Select your tees. Blue tees, 6197 yards."); }, 100);
+  }
+
+  // ===== LIST KEYBOARD NAV =====
+  function focusList(listId, idx) {
+    var list = document.getElementById(listId);
+    var items = list.querySelectorAll(".nav-item");
+    items.forEach(function (item, i) { item.classList.toggle("focused", i === idx); });
+    if (items[idx]) items[idx].focus();
+    listFocusIdx = idx;
+  }
+
+  function navList(dir) {
+    var listId, count;
+    if (currentScreen === "course") { listId = "courseList"; count = selectItems.length; }
+    else if (currentScreen === "holes") { listId = "holesList"; count = holesChoiceItems.length; }
+    else if (currentScreen === "finish") { listId = "finishList"; count = finishItems.length; }
+    else { listId = "teeList"; count = teeKeys.length + 1; }
+    var next = listFocusIdx + dir;
+    if (next < 0) next = 0;
+    if (next > count - 1) next = count - 1;
+    focusList(listId, next);
+    if (currentScreen === "course" && selectItems[next]) speak(selectItems[next].name);
+    else if (currentScreen === "holes" && holesChoiceItems[next]) speak(holesChoiceItems[next].label);
+    else if (currentScreen === "finish" && finishItems[next]) speak(finishItems[next].name);
+    else if (currentScreen === "tee") {
+      var tees = activeCourse.tees;
+      if (next === 0) speak("GPS only");
+      else if (teeKeys[next-1]) speak(tees[teeKeys[next-1]].label + " tees");
+    }
+  }
+
+  function selectFocused() {
+    if (currentScreen === "course") { chooseCourseItem(listFocusIdx); }
+    else if (currentScreen === "holes") { chooseHolesItem(listFocusIdx); }
+    else if (currentScreen === "finish") { assembleAndStart(pendingStartNine, finishItems[listFocusIdx].key); }
+    else if (currentScreen === "tee") {
+      var items = el.teeList.querySelectorAll(".nav-item");
+      if (items[listFocusIdx]) items[listFocusIdx].click();
+    }
+  }
+
+  // ===== MATH =====
+  function haversine(lat1, lng1, lat2, lng2) {
+    var R = 6371000;
+    var dLat = (lat2 - lat1) * Math.PI / 180;
+    var dLng = (lng2 - lng1) * Math.PI / 180;
+    var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+  function m2y(m) { return Math.round(m * 1.09361); }
+  function distTo(pt) { if (!pt || playerLat === null) return null; return haversine(playerLat, playerLng, pt.lat, pt.lng); }
+
+  // ===== VOICE =====
+  var hasSpeech = ("speechSynthesis" in window);
+
+  function speak(text) {
+    if (!voiceOn) return;
+    if (hasSpeech) {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.95;
+      speechSynthesis.speak(u);
+    }
+    if (el.liveRegion) { el.liveRegion.textContent = ""; setTimeout(function(){ el.liveRegion.textContent = text; }, 50); }
+  }
+  function speakHUD() {
+    if (!activeCourse) return;
+    var hole = activeCourse.holes[currentHole];
+    var dC = distTo(hole.green.center), dF = distTo(hole.green.front), dB = distTo(hole.green.back);
+    var msg = "";
+    if (dC !== null) msg += m2y(dC) + " to center.";
+    if (dF !== null && dB !== null) msg += " Front " + m2y(dF) + ", back " + m2y(dB) + ".";
+    var hz = hole.hazards.map(function (h) { return { label: h.label, dist: distTo(h) }; })
+      .filter(function (h) { return h.dist !== null; }).sort(function (a,b) { return a.dist-b.dist; });
+    if (hz.length) msg += " Nearest hazard " + m2y(hz[0].dist) + ".";
+    if (hole.dogleg) { var d = distTo(hole.dogleg); if (d !== null) msg += " Dogleg " + m2y(d) + "."; }
+    speak(msg);
+  }
+  function speakHoleChange(hole) {
+    var dC = distTo(hole.green.center);
+    var msg = "Hole " + hole.hole + ". Par " + (hole.par || "unknown") + ".";
+    if (dC !== null) msg += " " + m2y(dC) + " yards.";
+    speak(msg);
+  }
+
+  // ===== HOLE DETECTION =====
+  function detectHole() {
+    if (!activeCourse || playerLat === null) return;
+    var nextIdx = currentHole + 1;
+    if (nextIdx < 18) {
+      var d = distTo(activeCourse.holes[nextIdx].tee);
+      if (d !== null && d < 40) {
+        currentHole = nextIdx;
+        if (lastSpokenHole !== currentHole) { lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); }
+      }
+    }
+  }
+
+  // ===== HUD RENDER =====
+  function updateHUD() {
+    if (!activeCourse) return;
+    var hole = activeCourse.holes[currentHole];
+    el.holeNum.textContent = "HOLE " + hole.hole;
+    var par = hole.par ? "Par " + hole.par : "";
+    var official = "";
+    if (selectedTeeKey && activeCourse.tees && activeCourse.tees[selectedTeeKey]) {
+      var tee = activeCourse.tees[selectedTeeKey];
+      official = tee.holes[currentHole] + " yd (" + tee.label + ")";
+      el.teeBadge.innerHTML = tee.label.toUpperCase() + " TEES";
+      el.officialYd.textContent = "Official: " + tee.holes[currentHole] + " yd";
+    } else {
+      el.teeBadge.innerHTML = "";
+      el.officialYd.textContent = "";
+    }
+    el.holeMeta.textContent = par + (official ? " \u00b7 " + official : "");
+    if (playerLat === null) return;
+    var dC = distTo(hole.green.center), dF = distTo(hole.green.front), dB = distTo(hole.green.back);
+    el.yardCenter.textContent = dC !== null ? m2y(dC) : "---";
+    el.yardFront.textContent = dF !== null ? m2y(dF) : "--";
+    el.yardBack.textContent = dB !== null ? m2y(dB) : "--";
+    el.extraRow.innerHTML = "";
+    if (hole.dogleg) { var dd = distTo(hole.dogleg); if (dd !== null) el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-dg"></span><span class="extra-label">Dogleg</span><span class="extra-dist">' + m2y(dd) + '</span></div>'; }
+    if (hole.layups && hole.layups.length) hole.layups.forEach(function (lp) { var dl = distTo(lp); if (dl !== null) el.extraRow.innerHTML += '<div class="extra-item"><span class="dot-lu"></span><span class="extra-label">' + (lp.label||"Layup") + '</span><span class="extra-dist">' + m2y(dl) + '</span></div>'; });
+    var hz = hole.hazards.map(function (h) { return { label: h.label, dist: distTo(h) }; }).filter(function (h) { return h.dist!==null; }).sort(function (a,b) { return a.dist-b.dist; }).slice(0,3);
+    el.hazardList.innerHTML = "";
+    hz.forEach(function (h) { var d2 = document.createElement("div"); d2.className = "hz-row"; d2.innerHTML = '<span class="hz-dot"></span><span class="hz-name">' + h.label + '</span><span class="hz-dist">' + m2y(h.dist) + '</span>'; el.hazardList.appendChild(d2); });
+    if (gpsAcc !== null) { var cls = gpsAcc<=5?"good":gpsAcc<=15?"warn":"bad"; el.gpsStatus.textContent = "GPS: \u00b1" + gpsAcc.toFixed(0) + "m"; el.gpsStatus.className = "gps-status " + cls; }
+
+    // ARIA labels for glasses screen reader
+    var holeLabel = "Hole " + hole.hole + ". Par " + (hole.par || "") + ".";
+    el.prevBtn.setAttribute("aria-label", "Previous hole. " + holeLabel);
+    el.nextBtn.setAttribute("aria-label", "Next hole");
+    var centerText = dC !== null ? m2y(dC) + " yards to center" : "acquiring";
+    var frontText = dF !== null ? "Front " + m2y(dF) : "";
+    var backText = dB !== null ? "Back " + m2y(dB) : "";
+    var yardageLabel = holeLabel + " " + centerText + ". " + frontText + ". " + backText + ".";
+    el.yardageTap.setAttribute("aria-label", yardageLabel);
+
+    renderDots();
+  }
+
+  function renderDots() {
+    el.holeDots.innerHTML = "";
+    for (var i = 0; i < 18; i++) { var d = document.createElement("div"); d.className = "hdot" + (i < currentHole ? " done" : "") + (i === currentHole ? " active" : ""); el.holeDots.appendChild(d); }
+  }
+
+  // ===== GPS =====
+  function onPosition(pos) {
+    playerLat = pos.coords.latitude; playerLng = pos.coords.longitude; gpsAcc = pos.coords.accuracy;
+    if (el.loading.style.display !== "none" && !el.loading.classList.contains("hidden")) {
+      el.loading.classList.add("hidden");
+      // Check for saved round from today
+      var saved = loadSavedRound();
+      if (saved && saved.course === "White Horse Golf Club" && COURSES["white-horse"]) {
+        activeCourse = COURSES["white-horse"];
+        selectedTeeKey = saved.tee;
+        currentHole = saved.hole || 0;
+        currentStrokes = saved.strokes || 0;
+        holeScores = saved.scores || holeScores;
+        shots = saved.shots || [];
+        el.strokeNum.textContent = currentStrokes;
+        showScreen("hud");
+        speak("Round resumed. Hole " + (currentHole + 1) + ". " + currentStrokes + " strokes this hole.");
+      } else {
+        showScreen("course");
+      }
+    }
+    detectHole();
+    if (currentScreen === "hud") updateHUD();
+  }
+  function onError(err) {
+    var msgs = { 1:"Location permission denied. Allow location and reload.", 2:"Position unavailable. Go outdoors.", 3:"Location timed out." };
+    el.loading.classList.add("hidden"); el.error.classList.remove("hidden");
+    el.errTitle.textContent = "GPS Error"; el.errMsg.textContent = msgs[err.code] || "Error: " + err.message;
+  }
+  function showError(msg) { el.screenCourse.classList.add("hidden"); el.screenTee.classList.add("hidden"); el.screenHUD.classList.add("hidden"); el.error.classList.remove("hidden"); el.errMsg.textContent = msg; }
+
+  // ===== AUTO-ANNOUNCE TIMER =====
+  var lastAutoYard = null;
+  var autoAnnounceInterval = null;
+
+  function startAutoAnnounce() {
+    if (autoAnnounceInterval) return;
+    autoAnnounceInterval = setInterval(function () {
+      if (currentScreen !== "hud" || !activeCourse || playerLat === null) return;
+      var hole = activeCourse.holes[currentHole];
+      var dC = distTo(hole.green.center);
+      if (dC === null) return;
+      var yds = m2y(dC);
+      if (lastAutoYard === null || Math.abs(yds - lastAutoYard) >= 5) {
+        lastAutoYard = yds;
+        showHUDDisplay();
+        speakHUD();
+      }
+    }, 30000);
+  }
+
+  if (!("geolocation" in navigator)) {
+    el.loading.classList.add("hidden"); showScreen("course");
+  } else {
+    navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+  }
+
+  // ===== STROKE TRACKING =====
+  function markStroke() {
+    currentStrokes++;
+    var carry = null;
+    if (shots.length > 0 && playerLat !== null) {
+      var prev = shots[shots.length - 1];
+      carry = m2y(haversine(prev.lat, prev.lng, playerLat, playerLng));
+      lastCarry = carry;
+      el.strokeCarry.textContent = carry + " yd carry";
+    }
+    shots.push({ hole: currentHole, num: currentStrokes, lat: playerLat, lng: playerLng, carry: carry, club: null });
+    el.strokeNum.textContent = currentStrokes;
+    var carryText = carry ? carry + " yd carry" : "";
+    el.strokeBar.setAttribute("aria-label", currentStrokes + " strokes" + (carryText ? ". " + carryText : ""));
+    speak("Shot " + currentStrokes + "." + (carryText ? " " + carryText + "." : ""));
+    showHUDDisplay();
+    saveRound();
+    clubIdx = lastClubIdx;
+    showClubOverlay();
+  }
+
+  function undoStroke() {
+    if (currentStrokes === 0) { speak("No strokes to remove."); return; }
+    shots.pop();
+    currentStrokes--;
+    el.strokeNum.textContent = currentStrokes;
+    if (shots.length > 0 && shots[shots.length-1].carry) {
+      el.strokeCarry.textContent = shots[shots.length-1].carry + " yd carry";
+    } else { el.strokeCarry.textContent = ""; }
+    el.strokeBar.setAttribute("aria-label", currentStrokes + " strokes");
+    speak("Stroke removed. " + currentStrokes + " strokes.");
+    showHUDDisplay(); saveRound();
+  }
+
+  // ===== CLUB OVERLAY =====
+  function showClubOverlay() {
+    clubSelecting = true;
+    el.clubName.textContent = CLUBS[clubIdx];
+    el.clubOverlay.classList.remove("hidden");
+  }
+  function navClub(dir) {
+    clubIdx = Math.max(0, Math.min(CLUBS.length - 1, clubIdx + dir));
+    el.clubName.textContent = CLUBS[clubIdx];
+    speak(CLUBS[clubIdx]);
+  }
+  function confirmClub() {
+    if (shots.length > 0) { shots[shots.length-1].club = CLUBS[clubIdx]; lastClubIdx = clubIdx; }
+    hideClubOverlay(); speak(CLUBS[clubIdx] + " saved."); saveRound();
+  }
+  function skipClub() { hideClubOverlay(); }
+  function hideClubOverlay() { clubSelecting = false; el.clubOverlay.classList.add("hidden"); }
+
+  // ===== SCORECARD =====
+  function showScorecard() {
+    if (!activeCourse) return;
+    el.scCourseName.textContent = activeCourse.course;
+    function buildHalf(container, start) {
+      container.innerHTML = "";
+      for (var i = start; i < start + 9; i++) {
+        var hole = activeCourse.holes[i];
+        var score = holeScores[i];
+        var par = hole.par || 4;
+        var cell = document.createElement("div");
+        cell.className = "sc-cell" + (score !== null ? " played" : "") + (i === currentHole ? " sc-active" : "");
+        if (score !== null) {
+          var diff = score - par;
+          if (diff <= -2) cell.classList.add("eagle");
+          else if (diff === -1) cell.classList.add("birdie");
+          else if (diff === 0) cell.classList.add("par");
+          else if (diff === 1) cell.classList.add("bogey");
+          else if (diff === 2) cell.classList.add("double");
+          else if (diff > 2) cell.classList.add("over");
+        }
+        cell.innerHTML = '<div class="sc-h">' + hole.hole + '</div><div class="sc-s">' + (score !== null ? score : "\u2013") + '</div>';
+        container.appendChild(cell);
+      }
+    }
+    buildHalf(el.scFront, 0);
+    buildHalf(el.scBack, 9);
+    var scored = holeScores.filter(function(s){ return s !== null; });
+    var total = scored.reduce(function(a,b){return a+b;}, 0);
+    var totalPar = 0;
+    holeScores.forEach(function(s,i){ if (s !== null && activeCourse.holes[i].par) totalPar += activeCourse.holes[i].par; });
+    var diff = total - totalPar;
+    if (scored.length > 0) {
+      el.scTotal.innerHTML = 'Total <strong>' + total + '</strong> &nbsp;' + (diff > 0 ? "+" + diff : diff < 0 ? diff : "E") + ' par &nbsp;\u00b7&nbsp; ' + scored.length + ' holes';
+    } else { el.scTotal.textContent = "No holes completed yet"; }
+    el.scorecardOverlay.classList.remove("hidden");
+    setTimeout(hideScorecard, 30000);
+  }
+  function generatePDF() {
+    if (!activeCourse) return;
+    var jsPDF = window.jspdf ? window.jspdf.jsPDF : null;
+    if (!jsPDF) { alert("PDF library not loaded. Try copying instead."); return; }
+    var doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    var margin = 15; var y = 20;
+    // Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22); doc.setTextColor(74, 222, 128);
+    doc.text("ShadesCaddie", margin, y); y += 8;
+    doc.setFontSize(11); doc.setTextColor(180, 180, 180);
+    doc.text("Round Scorecard", margin, y); y += 10;
+    // Round info
+    doc.setFontSize(10); doc.setTextColor(255, 255, 255);
+    doc.setFillColor(30, 30, 30);
+    doc.roundedRect(margin, y, 180, 18, 3, 3, "F");
+    doc.setFont("helvetica", "normal");
+    var teeLabel = selectedTeeKey && activeCourse.tees ? activeCourse.tees[selectedTeeKey].label + " Tees (" + activeCourse.tees[selectedTeeKey].total.toLocaleString() + " yd)" : "GPS Only";
+    doc.text("Course: " + activeCourse.course, margin + 4, y + 6);
+    doc.text("Date: " + new Date().toLocaleDateString(), margin + 4, y + 12);
+    doc.text("Tees: " + teeLabel, margin + 100, y + 6); y += 24;
+    // Table header
+    var cols = [12, 28, 28, 28, 28, 28, 28, 28, 28, 28, 30];
+    var colX = [margin];
+    cols.forEach(function(w, i) { if (i < cols.length - 1) colX.push(colX[i] + w); });
+    var headers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "OUT"];
+    function drawRow(cells, fillColor, textColor, bold) {
+      doc.setFillColor.apply(doc, fillColor);
+      doc.rect(margin, y, 180, 8, "F");
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      doc.setFontSize(9); doc.setTextColor.apply(doc, textColor);
+      cells.forEach(function(c, i) { doc.text(String(c), colX[i] + cols[i] / 2, y + 5.5, { align: "center" }); });
+      y += 8;
+    }
+    function buildNine(label, start) {
+      var hNums = [label]; var pars = ["Par"]; var scores = ["Score"]; var diffs = ["+/-"];
+      var totalPar = 0; var totalScore = 0; var allScored = true;
+      for (var i = start; i < start + 9; i++) {
+        var h = activeCourse.holes[i]; var s = holeScores[i];
+        hNums.push(h.hole); pars.push(h.par || "-");
+        if (s !== null) { scores.push(s); totalScore += s; totalPar += (h.par || 0); var d = s - (h.par||0); diffs.push(d > 0 ? "+" + d : d < 0 ? d : "E"); }
+        else { scores.push("-"); diffs.push("-"); allScored = false; }
+      }
+      hNums.push(""); pars.push(totalPar); scores.push(allScored ? totalScore : "-"); diffs.push(allScored ? (totalScore - totalPar > 0 ? "+" + (totalScore - totalPar) : totalScore - totalPar < 0 ? (totalScore - totalPar) : "E") : "-");
+      drawRow(hNums, [40, 40, 40], [150, 150, 150], true);
+      drawRow(pars, [25, 25, 25], [200, 200, 200], false);
+      drawRow(scores, [15, 15, 15], [255, 255, 255], true);
+    }
+    // Back 9 headers
+    var backHeaders = ["", "10", "11", "12", "13", "14", "15", "16", "17", "18", "IN"];
+    buildNine("FRONT", 0); y += 4;
+    headers = backHeaders;
+    buildNine("BACK", 9); y += 4;
+    // Totals
+    var scored = holeScores.filter(function(s){ return s !== null; });
+    var total = scored.reduce(function(a,b){return a+b;},0);
+    var tPar = 0; holeScores.forEach(function(s,i){ if (s !== null && activeCourse.holes[i].par) tPar += activeCourse.holes[i].par; });
+    var diff = total - tPar;
+    doc.setFillColor(74, 222, 128); doc.rect(margin, y, 180, 10, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
+    doc.text("TOTAL: " + total + " (" + (diff > 0 ? "+" + diff : diff < 0 ? diff : "Even") + " par) through " + scored.length + " holes", margin + 4, y + 7);
+    y += 16;
+    // Club summary
+    var clubUsed = shots.filter(function(s){ return s.club; });
+    if (clubUsed.length > 0) {
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(74, 222, 128);
+      doc.text("Club Carries", margin, y); y += 6;
+      var clubMap = {};
+      clubUsed.forEach(function(s) {
+        if (s.carry) { if (!clubMap[s.club]) clubMap[s.club] = []; clubMap[s.club].push(s.carry); }
+      });
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(220, 220, 220);
+      Object.keys(clubMap).forEach(function(club) {
+        var carries = clubMap[club]; var avg = Math.round(carries.reduce(function(a,b){return a+b;},0) / carries.length);
+        doc.text(club + ": avg " + avg + " yd (" + carries.length + " shots)", margin, y); y += 5;
+      });
+    }
+    // Footer
+    y += 8;
+    doc.setFont("helvetica", "italic"); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+    doc.text("Generated by ShadesCaddie — ShadeCaddie.com", margin, y);
+    var date = new Date().toISOString().split("T")[0];
+    doc.save("ShadesCaddie-Round-" + date + ".pdf");
+  }
+
+  function copySummaryText() {
+    if (!activeCourse) return;
+    var lines = ["ShadesCaddie Round Summary", "=".repeat(30)];
+    lines.push("Course: " + activeCourse.course);
+    lines.push("Date: " + new Date().toLocaleDateString());
+    if (selectedTeeKey && activeCourse.tees) lines.push("Tees: " + activeCourse.tees[selectedTeeKey].label);
+    lines.push("");
+    lines.push("HOLE  PAR  SCORE  +/-");
+    lines.push("-".repeat(25));
+    var scored = holeScores.filter(function(s){return s!==null;});
+    var total = 0; var totalPar = 0;
+    holeScores.forEach(function(s, i) {
+      if (s !== null) {
+        var h = activeCourse.holes[i]; var par = h.par || 4; var diff = s - par;
+        total += s; totalPar += par;
+        lines.push("  " + String(h.hole).padStart(2) + "    " + par + "     " + s + "     " + (diff > 0 ? "+" + diff : diff < 0 ? diff : "E"));
+      }
+    });
+    lines.push("-".repeat(25));
+    var totalDiff = total - totalPar;
+    lines.push("TOTAL " + totalPar + "    " + total + "    " + (totalDiff > 0 ? "+" + totalDiff : totalDiff < 0 ? totalDiff : "E"));
+    lines.push("Holes played: " + scored.length);
+    var text = lines.join("\n");
+    navigator.clipboard.writeText(text).then(function() {
+      el.scCopyBtn.textContent = "\u2713 Copied!";
+      el.scCopyBtn.classList.add("copied");
+      setTimeout(function() { el.scCopyBtn.textContent = "\uD83D\uDCCB Copy"; el.scCopyBtn.classList.remove("copied"); }, 2000);
+    }).catch(function() {
+      var ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+      el.scCopyBtn.textContent = "\u2713 Copied!";
+      setTimeout(function() { el.scCopyBtn.textContent = "\uD83D\uDCCB Copy"; }, 2000);
+    });
+  }
+
+  function hideScorecard() { el.scorecardOverlay.classList.add("hidden"); }
+
+  function scoreWord(diff) {
+    if (diff === 0) return "even par";
+    if (diff === -1) return "birdie";
+    if (diff === -2) return "eagle";
+    if (diff === 1) return "bogey";
+    if (diff === 2) return "double bogey";
+    return (diff > 0 ? diff + " over par" : Math.abs(diff) + " under par");
+  }
+
+  function reportHoleScore() {
+    if (currentStrokes === 0) return;
+    var hole = activeCourse.holes[currentHole];
+    var par = hole.par || 4;
+    var diff = currentStrokes - par;
+    holeScores[currentHole] = currentStrokes;
+    var scored = holeScores.filter(function(s){ return s !== null; });
+    var total = scored.reduce(function(a,b){ return a+b; }, 0);
+    var totalPar = 0;
+    for (var i = 0; i <= currentHole; i++) { if (activeCourse.holes[i].par) totalPar += activeCourse.holes[i].par; }
+    var totalDiff = total - totalPar;
+    var msg = "Hole " + hole.hole + " complete. " + currentStrokes + " strokes. " + scoreWord(diff) + ".";
+    if (currentHole === 17) {
+      var roundData = {
+        date: new Date().toLocaleDateString(),
+        course: activeCourse.course,
+        tee: selectedTeeKey,
+        scores: holeScores.slice(),
+        total: total,
+        par: totalPar,
+        diff: totalDiff
+      };
+      saveToHistory(roundData);
+      localStorage.removeItem(ROUND_KEY);
+      msg += " Round complete. " + total + " total. " + (totalDiff >= 0 ? totalDiff + " over" : Math.abs(totalDiff) + " under") + " par.";
+      setTimeout(showScorecard, 2000);
+    } else {
+      msg += " Total: " + total + " through " + scored.length + " holes.";
+    }
+    speak(msg);
+    currentStrokes = 0; lastShotLat = null; lastShotLng = null; lastCarry = null;
+    el.strokeNum.textContent = 0; el.strokeCarry.textContent = "";
+    el.strokeBar.setAttribute("aria-label", "0 strokes");
+    saveRound();
+  }
+
+  // ===== FOCUS MODE =====
+  function showHUDDisplay() {
+    if (currentScreen !== "hud") return;
+    el.screenHUD.style.opacity = "1";
+    el.screenHUD.classList.remove("focus-mode");
+    if (focusTimer) clearTimeout(focusTimer);
+    focusTimer = setTimeout(function () {
+      el.screenHUD.style.opacity = "0";
+    }, FOCUS_DELAY);
+  }
+
+  // ===== CONTROLS =====
+  el.prevBtn.addEventListener("click", function () { if (currentHole > 0) { currentHole--; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); showHUDDisplay(); } });
+  el.nextBtn.addEventListener("click", function () {
+    reportHoleScore();
+    if (currentHole < 17) { currentHole++; lastSpokenHole = currentHole; speakHoleChange(activeCourse.holes[currentHole]); updateHUD(); showHUDDisplay(); }
+  });
+  el.yardageTap.addEventListener("click", function () { speakHUD(); showHUDDisplay(); });
+  el.muteBtn.addEventListener("click", function () { voiceOn = !voiceOn; if (!voiceOn) { if (hasSpeech) speechSynthesis.cancel(); el.muteBtn.textContent = "\u{1f507}"; el.muteBtn.classList.remove("on"); } else { el.muteBtn.textContent = "\u{1f50a}"; el.muteBtn.classList.add("on"); speakHUD(); } showHUDDisplay(); });
+  el.courseBtn.addEventListener("click", function () { clearRound(); showScreen("course"); });
+  el.strokeBar.addEventListener("click", function () { markStroke(); });
+  document.getElementById("cardBtn").addEventListener("click", function () { showScorecard(); });
+  el.scDownloadBtn.addEventListener("click", function (e) { e.stopPropagation(); generatePDF(); });
+  el.scCopyBtn.addEventListener("click", function (e) { e.stopPropagation(); copySummaryText(); });
+
+  // ===== D-PAD KEYBOARD NAVIGATION (Meta requirement) =====
+  // Any interaction shows the HUD — keydown, touch, or click
+  function onInteraction() { showHUDDisplay(); }
+  document.addEventListener("touchstart", onInteraction, { passive: true });
+  document.addEventListener("click", onInteraction);
+
+  document.addEventListener("keydown", function (e) {
+    // Club selection mode takes priority
+    if (clubSelecting) {
+      if (e.key === "ArrowUp") { e.preventDefault(); navClub(-1); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); navClub(1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); confirmClub(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); skipClub(); }
+      return;
+    }
+    // Scorecard dismissal
+    if (!el.scorecardOverlay.classList.contains("hidden")) {
+      hideScorecard(); return;
+    }
+    if (currentScreen === "course" || currentScreen === "tee" || currentScreen === "holes" || currentScreen === "finish") {
+      if (e.key === "ArrowUp") { e.preventDefault(); navList(-1); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); navList(1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectFocused(); }
+    } else if (currentScreen === "hud") {
+      showHUDDisplay();
+      if (e.key === "ArrowLeft") { e.preventDefault(); el.prevBtn.click(); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); el.nextBtn.click(); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); speakHUD(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); markStroke(); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); undoStroke(); }
+    }
+  });
+
+  // Auto-retry GPS every 8 seconds if permission denied
+  function startGPS() {
+    if (!("geolocation" in navigator)) {
+      el.loading.classList.add("hidden"); showScreen("course"); return;
+    }
+    navigator.geolocation.watchPosition(onPosition, function (err) {
+      var msgs = { 1:"Location permission denied. Retrying...", 2:"Position unavailable. Go outdoors.", 3:"Location timed out. Retrying..." };
+      el.loading.classList.add("hidden"); el.error.classList.remove("hidden");
+      el.errTitle.textContent = "GPS Error";
+      el.errMsg.textContent = msgs[err.code] || "Error: " + err.message;
+      setTimeout(function () {
+        el.error.classList.add("hidden"); el.loading.classList.remove("hidden");
+        startGPS();
+      }, 8000);
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+  }
+  startGPS();
+  renderDots();
+  startAutoAnnounce();
+})();
+</script>
+</body>
+</html>
