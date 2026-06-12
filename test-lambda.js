@@ -1,41 +1,71 @@
-# iGolf Connect -> ShadesCaddie (P2P) Integration
+// Test the Lambda handler by mocking global fetch and env.
+const path = require('path');
 
-Server-side course-data integration. Built and tested BEFORE credentials so it
-drops in the moment iGolf's license is green-lit and a key arrives.
+function freshHandler(env) {
+  // reset module cache so CONFIG re-reads env
+  delete require.cache[require.resolve('./lambda-course-proxy.js')];
+  Object.assign(process.env, env);
+  return require('./lambda-course-proxy.js').handler;
+}
 
-## Files
-- `igolf-transform.js` — converts an iGolf Connect course response into P2P course
-  JSON (same schema as White Horse). Field mapping is config-driven (FIELD_MAP).
-  Derives green front/center/back from the green polygon + tee line-of-play.
-- `lambda-course-proxy.js` — AWS Lambda handler. Hides credentials, calls iGolf,
-  transforms, validates, caches. Always falls back to "self-map" (Tier 3) on any
-  failure so the subscriber is never stuck.
-- `test-transform.js` / `test-lambda.js` — 30 passing tests (geometry, hazard
-  filtering, tee mapping, alternate field names, fallback paths).
-- `NOTES.md` — what iGolf's docs confirm + the key uncertainties.
+let pass=0, fail=0;
+function ok(n,c,x){ if(c){console.log("PASS",n);pass++;} else {console.log("FAIL",n, x!==undefined?JSON.stringify(x):"");fail++;} }
 
-## When the iGolf key arrives — the ONLY things to change
-1. **FIELD_MAP** in `igolf-transform.js` — set the real field names from iGolf's
-   actual response (the candidate-key design means most may already match).
-2. **CONFIG** in `lambda-course-proxy.js` — real base URL, endpoint paths, and auth
-   style. If iGolf uses AWS SigV4 (like Golfbert), add signing in `callIgolf()` only.
-3. Set env vars: `IGOLF_API_KEY`, `IGOLF_BASE_URL`, `IGOLF_AUTH_STYLE`.
-4. Re-run tests, then test against White Horse (compare to hand-mapped data).
+const greenRing = [
+  {lat:47.7628,lng:-122.5301},{lat:47.7628,lng:-122.5299},
+  {lat:47.7632,lng:-122.5299},{lat:47.7632,lng:-122.5301}
+];
+const fakeCourse = {
+  course_name: "Mock National",
+  tees: [{ tee_name:"Blue", total_yards:6500, holes:[400] }],
+  holes: [{ number:1, par:4, handicap:5,
+    teebox:{polygon:[{lat:47.7600,lng:-122.5300}]},
+    green:{polygon:greenRing},
+    hazards:[{surfacetype:"water", polygon:[{lat:47.7615,lng:-122.5300}]}] }]
+};
 
-## How it fits the three-tier strategy
-- Tier 1 (your mapped library) is checked first by the app.
-- This Lambda IS Tier 2 — call it when a course isn't in the library.
-- On no key / no match / error / invalid data, it returns `fallback: "self-map"`,
-  which the app uses to open the mapper (Tier 3). Subscriber never blocked.
+(async function () {
+  // 1) No API key -> 503 self-map fallback
+  let h = freshHandler({ IGOLF_API_KEY: "" });
+  let r = await h({ queryStringParameters: { q: "anything" } });
+  let b = JSON.parse(r.body);
+  ok("no key -> 503", r.statusCode === 503, r.statusCode);
+  ok("no key -> fallback self-map", b.fallback === "self-map", b);
 
-## Run tests
-```
-node test-transform.js   # 18 tests
-node test-lambda.js      # 12 tests
-```
+  // 2) With key + mocked fetch (search then course) -> 200 valid P2P
+  global.fetch = async function (url) {
+    if (url.indexOf("/search") !== -1) {
+      return { ok:true, json: async()=>({ courses:[{id: 123}] }) };
+    }
+    return { ok:true, json: async()=> fakeCourse };
+  };
+  h = freshHandler({ IGOLF_API_KEY: "test-key", IGOLF_BASE_URL: "https://mock/connect/v1" });
+  r = await h({ queryStringParameters: { q: "mock national" } });
+  b = JSON.parse(r.body);
+  ok("with key -> 200", r.statusCode === 200, r.statusCode);
+  ok("source igolf", b.source === "igolf", b.source);
+  ok("transformed course name", b.course && b.course.course === "Mock National", b.course && b.course.course);
+  ok("hole par present", b.course.holes[0].par === 4, b.course.holes[0].par);
+  ok("green center derived", !!b.course.holes[0].green.center);
+  ok("water hazard kept", b.course.holes[0].hazards.length === 1 && b.course.holes[0].hazards[0].label.indexOf("water")===0, b.course.holes[0].hazards);
+  ok("valid true", b.valid === true, b.issues);
 
-## NEVER
-- Put the API key in client code. It lives in Lambda env / Secrets Manager only.
-- Ship a course that fails validation (missing green center) as if it works —
-  validateCourse() flags it and the app self-maps instead.
-- Fabricate coordinates. Missing data -> self-map, never invented lat/lng.
+  // 3) Direct id fetch path
+  r = await h({ queryStringParameters: { id: "123" } });
+  b = JSON.parse(r.body);
+  ok("by id -> 200", r.statusCode === 200, r.statusCode);
+
+  // 4) Provider error -> self-map fallback, not a hard crash
+  global.fetch = async function(){ return { ok:false, status:500, text: async()=>"boom" }; };
+  h = freshHandler({ IGOLF_API_KEY:"test-key" });
+  r = await h({ queryStringParameters:{ q:"down" } });
+  b = JSON.parse(r.body);
+  ok("provider error -> fallback self-map", b.fallback === "self-map", b);
+
+  // 5) Missing params -> 400
+  r = await h({ queryStringParameters:{} });
+  ok("no params -> 400", r.statusCode === 400, r.statusCode);
+
+  console.log("\n"+pass+" passed, "+fail+" failed");
+  process.exit(fail?1:0);
+})();
