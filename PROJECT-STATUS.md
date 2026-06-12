@@ -1,281 +1,235 @@
-# ShadesCaddie — Course Data Strategy (Permanent Reference)
+# ShadesCaddie / Plans2Putts — PROJECT STATUS
+**Last updated: June 11, 2026 (end of session 3 — strategy deep-dive)
 
-**Purpose:** Define how the app ALWAYS provides course GPS data to a subscriber,
-so that a subscriber is NEVER blocked from playing — even when a course has no
-data available anywhere. This is the canonical solution to the "no GPS data"
-problem first encountered with Army Navy Country Club (Fairfax).
-
-Hand this document to any future build session before touching course-data code.
-
----
-
-## THE PROBLEM (stated permanently)
-
-When a subscriber selects a course, the app needs GPS coordinates for each hole
-(tee, green front/center/back, hazards, dogleg, layups) to calculate distances.
-If no coordinates exist for that course, the rangefinder cannot function and the
-subscriber is stranded. This MUST never be allowed to happen.
+> **IF YOU ARE A NEW CLAUDE SESSION:** Read this file first, then read every other
+> .md file in this repo's `docs/` folder (or root). Fetch any app file you need from
+> `https://raw.githubusercontent.com/harriskevint-hue/plans2putts/main/<filename>`.
+> Kevin (KT) is a non-programmer on Windows; you write the code, he clicks. Never
+> fabricate GPS coordinates. Never put API keys in client code. Do not break the
+> working production app — build changes in separate files, test, then promote.
 
 ---
 
-## THE SOLUTION: THREE-TIER FALLBACK CHAIN
+## 1. WHAT THIS IS
 
-On course selection, the app walks DOWN this chain until data is found:
+**ShadesCaddie** (project name Plans2Putts / P2P) is a GPS golf rangefinder web app
+for Meta smart glasses. Live yardages to green front/center/back, hazards, voice
+caddy via the glasses' speakers/screen reader, stroke counting, scorecard with PDF
+download, focus mode (HUD auto-hide). Works on Meta Ray-Ban Display (visual HUD +
+voice) and Oakley Meta HSTN (voice-only via Bluetooth audio with phone in pocket).
 
-### Tier 1 — Self-Mapped Library (first choice)
-- Courses mapped by Kevin / the ShadesCaddie team (e.g. White Horse, Army Navy Blue, Army Navy Red).
-- Stored as standard JSON in the app's course library.
-- Highest accuracy, zero cost, instant load.
-- ALWAYS checked first.
+- **Business:** $4.99/mo or $39.99/yr subscription (Stripe pending). Sold outside
+  Meta's platform (Bluetooth-audio path has no Meta restrictions).
+- **Domains:** ShadesCaddie.com (primary, live), ShadeCaddie.com, ShadesCaddie.golf,
+  ShadeCaddie.golf (301 redirects via Namecheap).
+- **Infrastructure:** AWS Amplify auto-deploys from this GitHub repo (account
+  "PERMITPREVIEW", us-east-2, resources prefixed `shadescaddie-`; dedicated AWS
+  account planned post-revenue via AWS Organizations). Route 53 hosted zone for
+  shadescaddie.com. MFA enabled on root.
+- **Meta:** registered in Wearables Developer Center; app loads on glasses by URL
+  (Developer Mode → Connect a Web App).
 
-### Tier 2 — Commercial API (broad coverage)
-- A paid GPS data provider (e.g. iGolf, Golfbert, GolfAPI.io, Golf Intelligence).
-- Queried for any course NOT in the Tier 1 library.
-- Provides "thousands of courses on day one."
-- REQUIRES a backend proxy to hide the API key (never put the key in client code).
-- Returned data is transformed into the standard JSON schema before use.
+## 2. WHAT IS LIVE AND WORKING (do not break)
 
-### Tier 3 — On-Demand Self-Mapping (the guarantee / escape hatch)
-- Used when a course is in NEITHER Tier 1 NOR Tier 2.
-- The subscriber is handed the in-app course mapper, pre-centered on the course.
-- They click tees / greens / hazards using satellite imagery + their scorecard.
-- Output saves to the SUBSCRIBER'S ACCOUNT (so they own it and reuse it).
-- Optionally copied to a REVIEW QUEUE for promotion into the Tier 1 library.
-- **This tier is what guarantees the app always works.** API coverage is never
-  100%; self-mapping is the floor that catches everything else.
+| File | Status |
+|---|---|
+| `index.html` | Landing page (light theme, AI golfer images, pricing, FAQ) — LIVE |
+| `rangefinder.html` | Production app — **White Horse GC fully working on glasses** |
+| `course-mapper.html` | Satellite pin-mapping tool (18-hole, White Horse centered) |
+| `gps-spike.html` | GPS accuracy test (passed: 3.0 m outdoors) |
 
----
+White Horse Golf Club (Kingston, WA) is fully mapped (embedded in rangefinder.html)
+with 6 tee sets. Verified on-course on the Ray-Ban Display.
 
-## WHY THIS IS FAST TO IMPLEMENT (every time)
+## 3. BUILT & TESTED — REPO UPLOAD STATUS (as of end of session 2)
 
-The mapper and data schema are already built and proven (White Horse was mapped
-this exact way). The "no data" solution is NOT new code each time — it is the
-same pipeline reused:
+**NOW LIVE IN REPO (uploaded & verified this session):**
+- ROOT: `rangefinder-v4.html`, `course-mapper-armynavy.html`, updated `README.md`
+- `docs/`: `PROJECT-STATUS.md`, `COURSE-DATA-STRATEGY.md`, `V4-UPLOAD-AND-MAPPING-GUIDE.md`
+- `courses/`: `army-navy-blue.json`, `-red.json`, `-white.json` (all 3 verified byte-for-byte
+  against masters: par 36 each; Blue/Red assembles to 18, par 72, blue tees 6644)
 
-1. Course not found in Tier 1 or Tier 2
-2. App opens the course mapper, pre-centered on the course location
-3. Subscriber clicks tees / greens / hazards (scorecard as guide)
-4. Mapper exports the STANDARD JSON schema (below)
-5. JSON saves to subscriber account (Tier 3) + optional review queue (-> Tier 1)
-6. App loads it and plays — identical to how White Horse works today
+**STILL TO UPLOAD:**
+- `integrations/` folder (iGolf + GolfCourseAPI code) — packaged as batch4-integrations.zip,
+  NOT yet uploaded. Pure code-preservation; nothing live depends on it. (TO-DO)
 
-The virtuous cycle: every course a subscriber maps can be reviewed and promoted
-into Tier 1, so coverage improves the more the app is used.
+**Details of what these files do:**
 
----
+1. **`rangefinder-v4.html`** — nine-based architecture. Subscriber picks a starting
+   nine → "Just these 9" or "Add a second nine" → picks finishing nine. True 9-hole
+   rounds supported. White Horse unchanged inside it. Separate file so production is
+   untouched until v4 is verified, then promote it to `rangefinder.html`.
+   NOT YET TESTED on device — White Horse regression test is the next action.
+2. **`courses/army-navy-*.json`** — nine-hole stubs. Pars + all tee yardages filled
+   from physical scorecards; **all coordinates null — must be mapped** (see §5).
+3. **`course-mapper-armynavy.html`** — 9-hole mapper, pre-centered on Fairfax VA.
+4. **`docs/COURSE-DATA-STRATEGY.md`** — the permanent three-tier data strategy.
+5. **`docs/V4-UPLOAD-AND-MAPPING-GUIDE.md`** — upload + mapping walkthrough.
+6. **iGolf integration** (`igolf-transform.js`, `lambda-course-proxy.js`, tests —
+   30/30 passing) — converts iGolf Connect polygons to P2P schema (derives green
+   front/center/back from green polygon + tee line-of-play). Config-driven FIELD_MAP;
+   waiting only on iGolf credentials/license. In batch4 zip; add under `integrations/igolf/`.
+7. **GolfCourseAPI integration** (`gca-transform.js`, `live-test.js`, browser tester,
+   16/16 tests) — scorecard-layer filler. In batch4 zip; add under `integrations/golfcourseapi/`.
 
-## STANDARD COURSE JSON SCHEMA (the contract every tier must produce)
+## 4. THE COURSE-DATA STRATEGY (permanent — full doc: COURSE-DATA-STRATEGY.md)
 
-This is the format the rangefinder reads. API responses and mapper exports must
-both be transformed into this shape.
+Three-tier fallback so a subscriber is NEVER stuck:
+- **Tier 1:** self-mapped library (White Horse now; Army Navy nines next).
+- **Tier 2:** commercial API (iGolf is the chosen candidate — see §6).
+- **Tier 3:** on-demand self-mapping via the mapper — the guarantee. On any data
+  failure the app routes the subscriber to the mapper. **Never invent coordinates.**
 
-```json
-{
-  "course": "Course Name",
-  "holes": [
-    {
-      "hole": 1,
-      "par": 4,
-      "tee":   { "lat": 47.768034, "lng": -122.532291 },
-      "green": {
-        "front":  { "lat": 47.76899, "lng": -122.5379 },
-        "center": { "lat": 47.76871, "lng": -122.5378 },
-        "back":   { "lat": 47.76855, "lng": -122.5377 }
-      },
-      "hazards": [ { "label": "hazard 1", "lat": 47.7667, "lng": -122.5380 } ],
-      "dogleg":  null,
-      "layups":  []
-    }
-    // ... one object per hole (9 or 18)
-  ]
-}
-```
+Nine-hole clubs (like Army Navy): map each nine ONCE; app assembles 18s at runtime.
 
-Required per hole: hole number, par, tee lat/lng, green center lat/lng.
-Recommended: green front + back, hazards. Optional: dogleg, layups.
+**P2P course JSON schema (the contract):**
+`{course, holes:[{hole, par, handicap, tee:{lat,lng}, green:{front,center,back:{lat,lng}}, hazards:[{label,lat,lng}], dogleg, layups:[]}], tees:{key:{label,total,holes:[yards]}}}`
 
----
+## 5. IMMEDIATE TO-DO (in order)
 
-## NINE-HOLE / COMBINATION COURSES (Army Navy model)
+### SESSION 3 SUMMARY (June 11 — strategy, no new app code)
+This was a strategy + planning session. Accomplished: (a) ran GolfCourseAPI live test
+via browser tester — confirmed scorecard-only, no coordinates, both courses present;
+(b) fully evaluated and rejected DIY workarounds for GPS coordinates (geocoding,
+scraping, satellite auto-detection, training an AI agent) — all either illegal, don't
+produce coordinates, or are a company-sized ML project; (c) developed the complete
+crowdsourced data + growth model (see COURSE-DATA-STRATEGY.md, much expanded); (d)
+wrote the Claude Code data-pipeline brief. NO changes to app code this session.
+NOTE: docs updated this session are NOT yet uploaded to GitHub (Kevin will upload).
 
-Some clubs are multiple 9-hole nines combined into 18-hole rounds
-(Army Navy Fairfax = Blue 9, Red 9, White 9).
+0. **Claude Code data pipeline** — brief written: `docs/CLAUDE-CODE-BRIEF-data-pipeline.md`.
+   Builds a course directory (name/address/geocode/scorecard) for 10,000+ courses as a
+   launch skeleton; coordinates stay NULL/unverified (NO fabrication). Run via cloud
+   Claude Code (avoids installing Node on Kevin's non-owned laptop). First step is
+   getting cloud Claude Code running, then Step 0/1 for one test state (Illinois).
+   NOTE: this produces a directory, NOT working distances — does not replace iGolf/
+   on-course capture for coordinates.
+   FIRST ACTUAL STEP: get cloud Claude Code running (see support.claude.com — local
+   install needs Node, which Kevin can't install on company laptop). Then point it at
+   this repo + the brief.
 
-RULE: Map each nine ONCE as its own 9-hole file
-(army-navy-blue.json, army-navy-red.json, army-navy-white.json).
+1. **Test v4 on phone — White Horse regression check (NEXT ACTION).** Open
+   shadescaddie.com/rangefinder-v4.html, select White Horse. It must go STRAIGHT to
+   tee selection (NOT ask "how many holes" — that's only for nines), then play exactly
+   like production rangefinder.html. Then optionally test a nine (Blue→9, Blue+Red→18).
+2. **Add `integrations/` folder to repo** (batch4-integrations.zip) — code preservation.
+   Two subfolders igolf/ and golfcourseapi/, each with its own README. Low urgency.
+3. **Map Army Navy Blue + Red coordinates — BLOCKED.** No hole-routing reference
+   available. Scorecards have data tables only, NOT overhead layout diagrams. Kevin
+   played it once (scramble) so mapping from memory is hard. NEED a routing source
+   first: Army Navy CC website course map, a yardage book, or a return visit. Until
+   then, Army Navy Blue/Red show in v4 but distances won't calculate. Parked, not dropped.
+4. **iGolf — RESPONDED, trial offered (ACTIVE THREAD).** Ryan Eibner replied June 11
+   confirming Full Vector GPS data + $5k entry + trial access. Reply sent accepting
+   trial & call. NEXT: schedule call, get trial credentials, test the pre-built iGolf
+   integration against White Horse (ground truth), confirm the 4 open questions
+   (Vector in entry tier? transaction counting? paid-subscription license? coverage?).
+   Decide AFTER testing — don't commit on the call. This substantially de-risks the
+   GPS-coordinate problem and may be a faster path to launch-with-distances than the
+   DIY data pipeline.
+5. **Rotate the GolfCourseAPI key** — NO self-service rotation exists (confirmed: their
+   API has only register/activate endpoints, no key management). Must EMAIL support to
+   reset. Low priority: key only reads public scorecard data, ~$10/mo capped exposure.
+   Better fix going forward: never paste keys in chat; keep in Lambda env only.
 
-At runtime the subscriber picks a STARTING nine and a FINISHING nine; the app
-assembles the 18 by concatenating two nines. Any 9 can also be played alone
-(start nine + "9 holes only"). Coordinates are never duplicated across combos.
+DONE this session: GolfCourseAPI live test (see §6); all root/docs/courses files
+uploaded & verified in repo; ramp-up + wrap-up doc system established.
 
-White Horse and other true 18-hole courses are stored as a single 18 and play
-normally without the start/finish picker.
+## 6. DATA-PROVIDER VERDICTS (evidence-based, June 2026)
 
----
+| Provider | Verdict |
+|---|---|
+| **iGolf** | **RESPONDED June 11 — Ryan Eibner, Global Account Manager (ryan.eibner@igolf.com).** Confirmed in writing: 40,000+ courses / 177 countries, REST API + JSON, and crucially "Full Vector GPS Data for rich 2D mapping" = the per-hole green/tee/hazard coordinates we need. Entry licensing transaction-based, $5,000/yr, stated as sufficient for "initial implementation and early-stage scaling." OFFERED TRIAL ACCESS to validate data. Reply sent (iGolf-Reply-to-Ryan.md) accepting trial + call, with 4 open questions: (1) is Full Vector GPS in the $5k entry tier or higher; (2) how are transactions counted / cost to scale; (3) does license permit paid-subscription resale; (4) trial validation against White Horse (our ground truth). NEXT: take call, get trial creds, test our built integration vs White Horse, THEN decide. Do not commit on the call. |
+| **GolfCourseAPI** | **TESTED LIVE THIS SESSION — confirmed scorecard-only, no per-hole coordinates** (verified via live browser test AND official OpenAPI schema: every hole is just {par, yardage, handicap}; one property-level lat/lng only). Both courses present: White Horse (id 18462); Army Navy Fairfax Blue/Red (id 10779) & White/Blue (id 10742), plus Arlington combos. $9.99/mo. Best uses: (1) auto-fill scorecard data when adding courses, (2) cross-check hand-entered pars/yardages. NOT a coordinate source. Bonus data available: bogey rating, front/back nine ratings, total_meters. NO self-service key rotation (email support). |
+| **Golfbert** | Right data shape (polygons + flag coords, SigV4 auth) but activity/pricing unverified; parked. |
+| **TruGolf** | NO course API (confirmed by Ryan Jones email): player/round data only. Closed for course data; possible future round-data partner. |
 
-## IMPLEMENTATION CHECKLIST (for any future session)
+## 7. HARD-WON LESSONS (do not relearn)
 
-- [ ] On course select, try Tier 1 (library) -> Tier 2 (API) -> Tier 3 (mapper)
-- [ ] Never put API keys in client code — always proxy through the backend
-- [ ] All sources output the STANDARD JSON SCHEMA above
-- [ ] Mapper saves Tier 3 output to subscriber account + review queue
-- [ ] Promotion path: reviewed subscriber maps -> Tier 1 library
-- [ ] Nine-hole clubs: map each nine once; assemble combos at runtime
-- [ ] NEVER fabricate coordinates. Missing data -> route to mapper, never invent.
+- `zip -j` when packaging files for GitHub upload (subfolder paths break Amplify).
+- GitHub web upload must land files at repo ROOT (or intended folder) — a stray
+  `home/claude/` folder once broke the deploy.
+- GitHub makes a folder by committing a file into it — type `folder/file.ext` in
+  "Create new file" (the slash makes the folder). No empty-folder creation exists.
+- GitHub web upload sometimes lists each file TWICE if selected twice — delete the
+  dupes (✗) before committing, or re-do the upload with a single clean selection.
+- GitHub raw URL (raw.githubusercontent.com) CACHES ~1–2 min after commit — a fresh
+  commit may read as empty/1-byte briefly. Not an error; re-fetch after a minute.
+  Browser file view can also show a stale "1 Byte / 0 lines" render — refresh page.
+- To verify a committed file's content, fetch the raw URL (after cache settles) or
+  use the GitHub API; don't trust the first render.
+- Glasses runtime: Web Speech API unsupported → voice via ARIA live regions and the
+  glasses' screen reader. D-pad nav needs `.focusable` + keydown handling. Black
+  background = transparent on the additive display.
+- App open gesture on glasses: first tap announces, second tap opens.
+- GPS permission on glasses: auto-retry every 8 s (button taps were unreliable).
+- API keys: server-side only (Lambda env). Rotate any key pasted into chat. Note:
+  not every provider offers self-service key rotation (GolfCourseAPI does not).
+- Amplify auto-deploys ~2 min after any commit to `main`.
+- Multi-nine course mapping needs an OVERHEAD ROUTING DIAGRAM, not just a scorecard.
+  Scorecards are data tables (yardage/par/handicap), they do NOT show which green/tee
+  belongs to which nine. Get a course-layout map before attempting to map a shared-
+  property multi-nine club like Army Navy Fairfax.
+- Army Navy flag colors (from card): Red flag = front, White = center, Gold = back.
+- GolfCourseAPI / similar: bulk-scraping the whole database violates ToS AND wouldn't
+  help (no coordinates). Use per-course on-demand lookups only. Coverage-with-coords
+  comes from licensing iGolf, not scraping.
 
----
+### Session 3 strategy lessons (data coverage)
+- NO cheap/free workaround produces per-hole GPS coordinates. Confirmed dead ends:
+  Census geocoder (gives ONE property point, not green/tee coords); scorecard photos
+  (no coords); USGS imagery (a picture, not coords); AI auto-detection of greens from
+  imagery (unreliable, a wrong coord = wrong yardage on a real shot); training a
+  custom AI agent (a company-sized ML project, costs more than licensing iGolf).
+- Coordinates come from exactly 3 places: license (iGolf), golfer on-course GPS
+  capture, or careful human satellite pin-placement. There is no 4th shortcut.
+- USGS imagery's real use = a CANVAS for humans/subscribers placing pins, not a
+  coordinate source. And a live satellite map view (Google/Apple tiles) usually beats
+  bulk-downloading USGS images (free, current, no storage). Cache USGS per-course only
+  for offline mapping on remote courses.
+- Two contribution types must NOT be conflated: scorecard upload (effortless, confirms
+  scorecard, does NOT improve coordinates) vs. on-course GPS tap (the real refinement).
+  Separate badges. Design for "one tap at the green while putting out" as the minimum-
+  effort high-value contribution.
+- Honest framing of the pipeline: it builds a DIRECTORY (name/address/geocode/
+  scorecard), not a working rangefinder dataset. Good for coverage/credibility at
+  launch IF every unverified hole is honestly labeled. Does not substitute for a GPS
+  provider — those solve different problems.
+- Sequencing caution: the pipeline produces data that needs the Phase 4 backend to
+  serve, for an app not yet beta-validated. Consider proving the core app + a few
+  well-mapped courses BEFORE scaling to 10,000. Market lead comes from the experience
+  being real on N courses, not from a large directory that can't show distances.
+- Kevin can't install Node on his company-owned laptop → use CLOUD Claude Code. The
+  app lives in GitHub regardless of where Claude Code runs; nothing to "migrate."
 
-## DATA-QUALITY TIERS: APPROXIMATE vs. GOLFER-VERIFIED (added session 2)
+## 8. PROJECT-STATUS / SESSION PROCEDURES (the ramp-up & wrap-up system)
 
-A course is never "empty." Every hole carries a STATUS so the golfer always knows
-how trustworthy each yardage is. This lets the app launch with broad coverage
-(approximate) that improves hole-by-hole as real golfers walk courses.
+The repo is the project's permanent brain — survives cleared sandboxes, new chats,
+and the 100-image limit. Two matched prompts:
 
-### Per-hole status values
-- **approximate** — coordinates roughly placed from satellite imagery (quick human
-  estimate) OR licensed from iGolf. Usable, labeled "unverified."
-- **verified** — a golfer physically walked the hole and captured GPS on-course.
-  Highest trust. Badge: "GPS verified on-course by a ShadesCaddie member."
-  Stores who + when.
+**RAMP UP a new chat** — paste:
+> "Fetch and read
+> https://raw.githubusercontent.com/harriskevint-hue/plans2putts/main/docs/PROJECT-STATUS.md
+> then read the other docs it references and list the repo contents. Tell me where we
+> left off and what's next."
 
-IMPORTANT HONESTY NOTE: free/cheap data (GolfCourseAPI scorecards, geocoding) does
-NOT supply per-hole coordinates. It supplies pars/yardages/handicaps + one property
-point. So the "approximate" coordinate baseline still must come from rough satellite
-mapping or iGolf — the free data only *guides* placement and powers the distance
-cross-check (measured tee->green vs. scorecard yardage). Do not promise "free
-coordinates for every hole" — the baseline costs rough-mapping labor or an iGolf license.
+**WRAP UP a session** — paste:
+> "Wrap up the day: update PROJECT-STATUS.md with everything we accomplished this
+> session, what changed in the app or strategy, any new lessons learned, and the
+> current to-do list. Then package every new or changed file from today into a flat
+> zip ready for GitHub upload, list exactly what goes where in the repo, and give me
+> the step-by-step upload checklist."
 
-### Schema addition (per hole)
-Add to each hole object:
-  "status": "approximate" | "verified",
-  "verified_by": "<member id or null>",
-  "verified_at": "<ISO date or null>"
+(Short wrap-up for small sessions: "Update PROJECT-STATUS.md and give me just the
+changed files.")
 
-### Incremental mapping flow (subscriber, over weeks)
-- App knows the course's hole count (e.g. 27 holes = three nines) and shows progress:
-  "27 holes — 6 verified, 21 approximate."
-- Subscriber maps in small bites (3 / 7 / 9 holes at a time). Each hole uploads and
-  graduates independently from approximate -> verified. No need to map a whole course
-  at once (that's what makes it not a chore).
-- Design the incentive as a small mission ("go map these 9 holes") rather than
-  "map while you play" — stopping to walk to each green slows a real round and annoys
-  playing partners.
+Requirements: repo stays public; chat has the code/analysis tool (claude.ai does).
+Backup: Claude can search past chats by topic; memory carries a project summary.
+After any wrap-up, upload the refreshed PROJECT-STATUS.md to docs/ so it stays current.
 
-### On-course capture (the verified-data workflow)
-- Subscriber walks/rides the course, stands ON each point, taps once to capture GPS:
-  tee, front/center/back of green, hazards. GPS works offline (talks to satellites),
-  so spotty WiFi is fine — capture stores LOCALLY first, uploads later.
-- One tap = capture. One tap = undo a bad entry. Re-tap = recapture. Simple big buttons.
-- Audio fallback: subscriber narrates points while walking ("front of green 4, bunker
-  right..."), uploads after the round, company reviews/transcribes. Good for local
-  knowledge ("hidden creek short of the green").
-- Phone/iPad tap is the PRIMARY, reliable input. Meta wristband one-click is
-  EXPERIMENTAL (depends on what gestures Meta exposes to web apps) — build tap first.
-
----
-
-## AUDIENCE & DEVICE TIERS (added session 2) — DESIGN PRINCIPLE
-
-ShadesCaddie must NOT be a Meta-glasses-only app. Tying viability to a tiny new-device
-base caps the market. Phone + ANY audio is a first-class experience; glasses are the
-premium enhancement, never a requirement.
-
-- **Tier A — Phone + any earbuds/bone speakers (Shokz, AirPods, etc.):** FULL core
-  experience. Voice yardages through audio, phone in pocket. This is the LARGE market.
-- **Tier B — Meta voice-only (Oakley Meta / Ray-Ban non-display):** same audio
-  experience via the glasses' speakers.
-- **Tier C — Meta Ray-Ban Display:** premium — adds the visual HUD on top of audio.
-
-Every feature should degrade gracefully: if it works great for a golfer with a phone
-and cheap earbuds, it works for everyone. Design audio-first; treat the visual HUD as
-an enhancement layer for the device that has it.
-
-### Launch-coverage principle
-Launching with ~500 approximate courses (ready for subscriber enrichment) reads as a
-real product; launching with 6 reads as a hobby. Coverage is a credibility
-requirement, not just a feature. Budget for the approximate baseline (rough mapping
-labor or iGolf license) as a launch cost.
-
----
-
-## LAUNCH PHILOSOPHY: COVERAGE-FIRST WITH HONEST CONFIDENCE (added session 2)
-
-Resolved strategic position (Kevin's call, endorsed):
-
-**Launch broad, not perfect.** A large library of rough courses with honest labeling
-beats a handful of perfect ones. 6 flawless courses fails market acceptance; thousands
-of rough-but-honestly-labeled courses, refinable by local golfers, succeeds. Coverage
-is the credibility and adoption driver.
-
-**The safety constraint is honesty, not precision.** The one failure a rangefinder
-cannot have is confidently showing a WRONG number as if it were trusted. The fix is
-not higher accuracy everywhere — it is transparent per-hole confidence:
-
-- Every hole shows its status to the golfer: **verified-by-golfer** vs.
-  **not yet reviewed by a golfer**.
-- Unverified holes are clearly labeled and paired with a call to action:
-  "This hole hasn't been reviewed by a golfer yet — help us improve it."
-- This protects trust (golfers calibrate; their own eyes give rough distance sense)
-  AND recruits contributors (the visible gap is the invitation).
-
-**Minimum quality floor for rough data:** approximate coordinates should be
-"roughly right" (in the ballpark from satellite estimation or iGolf), not random.
-Honest labeling covers imprecision; it cannot rescue data that is wildly wrong.
-
-### The Wikipedia / recognition model (growth engine)
-Golfers, like Wikipedia editors, are motivated by RECOGNITION as much as reward:
-- Attribute every refinement: "Hole 5 refined by [member], [date]."
-- Recognition features: contributor badges, "you've verified N holes," course-level
-  and community leaderboards, "refined by [member]" shown on the hole.
-- Material reward (incentives) PLUS status/recognition. Do not underestimate status —
-  it may drive more contribution than money. Local pride in a home course is real.
-
-### Per-hole status model (UI + data)
-- `unverified` (rough: iGolf or satellite estimate) — labeled, shows "help improve."
-- `refined` (a golfer recorded data on-course) — attributed to that member.
-- Multiple subscribers can refine different holes on the same course; in busy markets
-  a popular course fills in fast. Each hole graduates independently.
-- Attribution enables QUALITY CONTROL: weight or revoke a contributor's data; if a
-  member proves unreliable, filter/roll back all holes they touched. Build attribution
-  in from day one — it is painful to retrofit.
-
----
-
-## TWO CONTRIBUTION TYPES — DON'T CONFLATE THEM (added session 2)
-
-A critical distinction for data integrity. There are two very different kinds of
-subscriber contribution. Conflating them breaks the honest-labeling principle.
-
-### Type A — Scorecard verification (effortless, LOW coordinate value)
-- Subscriber uploads a photo of the scorecard (optionally with notes).
-- Confirms/corrects the SCORECARD layer only: par, yardage, handicap.
-- Does NOT add or improve any GPS coordinate. The app likely already had the
-  scorecard from GolfCourseAPI. A scorecard photo contains NO coordinates and
-  cannot be turned into them.
-- Value: engagement, recruitment, confirming scorecard accuracy. Reward modestly.
-- Badge: "Scorecard confirmed by [member]" — NOT "GPS verified."
-
-### Type B — On-course GPS capture (some effort, HIGH value)
-- Subscriber stands on the actual point and taps; phone GPS records the real coord.
-- THIS is what refines coordinates and improves live distances for the next golfer.
-- Value: the real refinement engine. Reward most heavily. Weight in QA.
-- Badge: "GPS verified by [member]" — this is the one that changes the hole's
-  position and flips status unverified -> refined.
-
-### The trap to avoid
-Do NOT show a hole as "refined by [member]" because someone uploaded a scorecard.
-The coordinates never changed; the next golfer would trust an unimproved number.
-Keep the badges separate. Only Type B changes coordinates and confidence status.
-
-### Design goal: make Type B nearly as effortless as Type A
-The win is not "upload a scorecard" (effortless but doesn't help coordinates) — it is
-making ON-COURSE CAPTURE almost as effortless. Minimum-effort version: a single
-"I'm at the green" CENTER-of-green tap while the golfer is already putting out — no
-walking to front/back required. One tap, barely more than nothing, and it actually
-refines the coordinate. Engineer for that one-tap-at-the-green capture. Front/back/
-hazard taps are optional bonus contributions for the more engaged.
-
-Reality: most golfers won't walk a course tapping pins. But many will tap once at
-the green on holes they're already playing. That single tap is the contribution worth
-designing around — effortless capture of the thing that's actually missing (a GPS
-point), not effortless upload of the thing we already have (the scorecard).
+- **P1–P3 (done):** rangefinder, voice, stroke/score, scorecard+PDF, focus mode,
+  localStorage persistence, glasses operation.
+- **P3.5 (current):** nine-based v4, Army Navy, provider selection, ramp-up docs.
+- **P4 (next):** AWS backend (Lambda proxy, Cognito accounts, DynamoDB/Airtable
+  round history), Stripe, iGolf Tier 2, Google Play (TWA, $25), landing-page demo
+  video, beta testers. Break-even ≈170 subs @$4.99 if iGolf at $5k/yr (≈84 without).
