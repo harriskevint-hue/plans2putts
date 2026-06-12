@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GolfCourseAPI Tester</title>
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+         max-width: 820px; margin: 24px auto; padding: 0 16px; color: #1c2b22; }
+  h1 { font-size: 1.3rem; }
+  label { display:block; font-weight:600; margin:14px 0 4px; }
+  input { width:100%; padding:10px; font-size:1rem; border:1px solid #bbb; border-radius:8px; box-sizing:border-box; }
+  button { margin-top:16px; padding:12px 20px; font-size:1rem; font-weight:700;
+           background:#1f5132; color:#fff; border:0; border-radius:10px; cursor:pointer; }
+  button:disabled { background:#9bbfa8; cursor:default; }
+  pre { background:#0f1c14; color:#d8ffe6; padding:14px; border-radius:10px;
+        white-space:pre-wrap; word-break:break-word; margin-top:18px; font-size:0.9rem; }
+  .verdict { font-weight:700; padding:12px; border-radius:10px; margin-top:14px; }
+  .ok { background:#e3f6e8; color:#14532d; }
+  .no { background:#fdeaea; color:#7f1d1d; }
+  .muted { color:#666; font-size:0.85rem; }
+</style>
+</head>
+<body>
+  <h1>GolfCourseAPI Tester</h1>
+  <p class="muted">Open in Chrome. Enter your API key and a course name, click Test.
+  Nothing is installed or stored. Results show below and can be copied.</p>
+
+  <label>API Key</label>
+  <input id="key" placeholder="paste your GolfCourseAPI key (the part after 'Key ')" />
+
+  <label>Course to search</label>
+  <input id="term" value="white horse" />
+
+  <button id="go">Test this course</button>
+
+  <div id="out"></div>
+
+<script>
+const $ = function(id){ return document.getElementById(id); };
+const BASE = "https://api.golfcourseapi.com";
+
+$("go").onclick = async function () {
+  const key = $("key").value.trim();
+  const term = $("term").value.trim() || "white horse";
+  const out = $("out");
+  if (!key) { out.innerHTML = '<div class="verdict no">Enter your API key first.</div>'; return; }
+  $("go").disabled = true;
+  out.innerHTML = '<p class="muted">Searching…</p>';
+  const log = [];
+  const H = { "Authorization": "Key " + key };
+
+  try {
+    // 1) SEARCH
+    const s = await fetch(BASE + "/v1/search?search_query=" + encodeURIComponent(term), { headers: H });
+    if (!s.ok) { throw new Error("Search failed: HTTP " + s.status + " " + (await s.text()).slice(0,200)); }
+    const sj = await s.json();
+    const courses = sj.courses || [];
+    log.push("SEARCH \"" + term + "\": " + courses.length + " match(es)");
+    courses.slice(0,5).forEach(function(c,i){
+      log.push("  ["+i+"] id="+c.id+"  "+(c.club_name||"")+" / "+(c.course_name||"")+
+               "  — "+((c.location&&c.location.city)||"?")+", "+((c.location&&c.location.state)||"?"));
+    });
+    if (!courses.length) {
+      out.innerHTML = '<div class="verdict no">No matches for "'+term+'". Course may not be in their database.</div><pre>'+log.join("\n")+'</pre>';
+      $("go").disabled = false; return;
+    }
+
+    // 2) FETCH first match
+    const id = courses[0].id;
+    log.push("\nFETCH course id=" + id + " …");
+    const r = await fetch(BASE + "/v1/courses/" + id, { headers: H });
+    if (!r.ok) { throw new Error("Fetch failed: HTTP " + r.status + " " + (await r.text()).slice(0,200)); }
+    const raw = await r.json();
+    const course = raw.course || raw;
+    log.push("Top-level fields: " + Object.keys(course).join(", "));
+    if (course.location) log.push("Property location (ONE point): " + course.location.latitude + ", " + course.location.longitude);
+
+    // 3) COORDINATE CHECK
+    let hasCoords = false;
+    const maleTees = (course.tees && course.tees.male) || [];
+    if (maleTees[0] && maleTees[0].holes && maleTees[0].holes[0]) {
+      const h1 = maleTees[0].holes[0];
+      log.push("\nHole 1 fields: " + Object.keys(h1).join(", "));
+      log.push("Hole 1 data: " + JSON.stringify(h1));
+      hasCoords = maleTees[0].holes.some(function(h){
+        return h.lat||h.latitude||h.green||h.coordinates||h.tee||h.polygon;
+      });
+    }
+    log.push("\nScorecard tees: " + maleTees.map(function(t){return t.tee_name+"("+t.total_yards+"y)";}).join(", "));
+    if (maleTees[0] && maleTees[0].holes) {
+      log.push("Pars: " + maleTees[0].holes.map(function(h){return h.par;}).join(","));
+      log.push("Handicaps: " + maleTees[0].holes.map(function(h){return h.handicap;}).join(","));
+    }
+
+    const verdict = hasCoords
+      ? '<div class="verdict ok">Per-hole GPS coordinates: PRESENT (unexpected — tell Claude!)</div>'
+      : '<div class="verdict no">Per-hole GPS coordinates: NONE — scorecard data only (as expected). Good for pars/yardages; cannot drive live distances by itself.</div>';
+    out.innerHTML = verdict + '<pre>'+log.join("\n")+'</pre>' +
+      '<p class="muted">Copy everything above and paste it back to Claude.</p>';
+
+  } catch (e) {
+    out.innerHTML = '<div class="verdict no">Error: '+ (e.message||e) +'</div>' +
+      '<pre>'+log.join("\n")+'</pre>' +
+      '<p class="muted">If this is a CORS/network error, the browser may be blocked from calling the API directly — in that case we use the Node method instead.</p>';
+  }
+  $("go").disabled = false;
+};
+</script>
+</body>
+</html>
