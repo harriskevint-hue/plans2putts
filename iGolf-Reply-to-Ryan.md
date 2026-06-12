@@ -1,61 +1,59 @@
-# iGolf "Let's Talk" — Outreach Message
+# Reply to Ryan Eibner (iGolf)
 
-## Subject line
-API access inquiry — golf course GPS coordinate data
+**To:** ryan.eibner@igolf.com
+**Subject:** Re: iGolf Golf Data Licensing
 
 ---
 
-## Message body
+Hi Ryan,
 
-Hello iGolf team,
+Thank you for the thorough overview — this is very helpful, and iGolf looks like a
+strong fit for what we're building. I'd be glad to schedule a call, and I'd like to
+take you up on the trial access so I can validate the data directly.
 
-I'm a developer building a GPS golf rangefinder application, and I'm evaluating
-course-data providers to power live on-course distance calculations. iGolf Connect
-looks like a strong potential fit. Before moving forward, I'd like to confirm a few
-things to determine whether your API meets my needs.
+To make our call as productive as possible, here are the areas I'm most focused on:
 
-**1. Data fit.** I need per-hole GPS coordinate data in JSON — specifically green
-perimeter (to derive front, center, and back distances), tee box locations, and
-hazard and water polygons. Can you confirm the API response includes per-feature
-latitude/longitude coordinates that I can compute distances against?
+1. **Vector GPS in the entry package.** Our application needs per-hole green
+   (front/center/back) and hazard coordinates to calculate live distances. Is your
+   Full Vector GPS data included at the $5,000 entry tier, or is it a separate/higher
+   package? I want to be sure the entry level covers the data we actually need.
 
-**2. Pricing.** Your site lists pricing "starting as little as $5,000 per year." Is
-that the entry point for a small/independent developer? Can you explain the
-difference between the per-request and unlimited models, and whether there's a
-startup tier, trial, or low-volume option available while I validate the product?
+2. **Transaction-based pricing.** Could you explain how transactions are counted and
+   what volume the $5,000 tier includes — and what happens (and what it costs) as we
+   scale past it? I want to model how cost grows with subscriber usage.
 
-**3. License.** My application is a paid consumer subscription product. Does the
-iGolf Connect license permit using your coordinate data within a paid subscription
-app delivered to end users? I'd like to confirm this is permitted before building
-any integration.
+3. **Licensing for a paid subscription app.** Our product is a paid consumer
+   subscription. Can you confirm the license permits using iGolf coordinate data
+   within a paid subscription product delivered to end users?
 
-**4. Coverage check.** Are these two courses in your database? I've independently
-collected data for both and would like to compare against your data as an accuracy test:
-   - White Horse Golf Club — Kingston, WA
-   - Army Navy Country Club — Fairfax, VA
+4. **Trial validation.** For the trial, I'd like to verify coverage and accuracy
+   against a course I've already mapped myself — White Horse Golf Club in Kingston,
+   Washington — as a ground-truth check, and confirm a few other target courses are
+   present.
 
-**5. Integration.** I would call iGolf Connect through a server-side proxy, keeping
-credentials off the client. Do you provide API documentation and a sandbox or test
-key so I can evaluate the integration before a full commitment?
+For scheduling, I'm generally available [your availability — e.g. "Tuesday and
+Thursday afternoons Pacific time"]. Let me know what works on your end and I'll get
+it on the calendar. I'll also download the iGolf app in the meantime to see the data
+in action.
 
-I'd welcome a short call to discuss. I'm moving quickly and want to choose a data
-partner I can grow with.
+Looking forward to it.
 
-Thank you,
-
+Best,
 Kevin T. Harris
-[your email]
 [your phone]
+[your email]
 
 ---
 
-## Notes (not part of the message — for you)
-
-- **The four answers that decide everything:** real entry price, per-request vs.
-  unlimited, license permits paid-subscription resale, and a trial/test key. If the
-  license answer is no, stop there regardless of how good the data is.
-- Keep the first message this length — sales teams respond faster to a focused note.
-- Don't name a budget first. Let them quote. "Starts as little as $5,000" is their
-  floor; your goal is to learn whether a smaller startup tier exists.
-- If they push for a call before answering pricing/license in writing, that's normal
-  for enterprise sales — but get the license answer in writing before you sign.
+## Notes (for you — not part of the email)
+- Fill in your real availability in the scheduling line, and your phone/email in the
+  signature.
+- The four questions are ordered by what matters most to your decision: (1) is the
+  data you need in the affordable tier, (2) how does cost scale, (3) can you legally
+  resell it in a paid app, (4) is it accurate on a course you can verify.
+- Get the LICENSE answer (#3) in writing before signing anything, even if the call
+  goes well.
+- The trial is your free de-risking step. Your iGolf integration code is already
+  built and tested — when trial credentials arrive, we test it against White Horse.
+- Don't commit on the call. "Take the call, accept the trial, decide after testing"
+  is the plan.
