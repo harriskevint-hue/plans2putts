@@ -87,6 +87,32 @@ Nine-hole clubs (like Army Navy): map each nine ONCE; app assembles 18s at runti
 
 ## 5. IMMEDIATE TO-DO (in order)
 
+### SESSION 4 (cont., June 13) — Step 1 Washington DATA loaded & MERGED to main
+**Step 1 is COMPLETE for Washington.** 255 LISTED courses loaded into courses.db and
+merged to main (PR #2 / 995fad4).
+- White Horse Golf Club present; Sky Ridge Golf Course merged into one row WITH its
+  Sequim address; the 2 unnamed WA rows kept with an honest placeholder (not invented).
+- holes table intentionally EMPTY. Coordinates are OSM PROPERTY points (course
+  centroids) in property_lat/lng — NOT per-hole coordinates. So these are LISTED, not
+  PLAYABLE. The hard rule holds.
+- 268 raw rows -> 12 practice facilities removed, 1 annex merged -> 255 inserted.
+  79 websites + audit notes preserved (new website/notes columns on courses).
+
+**Provenance (how the data was made):** directory data is pulled from OSM Overpass on
+a LOCAL machine (Overpass is blocked in the Claude Code web environment), then
+cleaned/de-duped, then loaded via load_washington_csv.py. The cleaned CSV
+(data/washington_courses_clean.csv) is the committed, reproducible seed; courses.db
+stays gitignored and is regenerable from it.
+
+**Standard method going forward:** us_courses_pull.py is the canonical RAW pull for
+all 50 states + DC (see REFRESH-COURSE-DIRECTORY.md). Cleaning, dedup review, and the
+practice-facility filter happen DOWNSTREAM at load time, not in the pull.
+
+**Open threads:** (a) iGolf trial call (Tier 2) still pending; (b) per-hole geometry
+still to come (golfer capture / iGolf) — nothing here makes a course playable;
+(c) manual confirmation pending for the 3 verify-flagged "golf center" rows (Redwood
+Golf Center, Tom's Golf Center, Tin Cup Golf) and the 2 unnamed WA rows.
+
 ### SESSION 4 SUMMARY (June 13 — cloud Claude Code: data-pipeline Step 0 + Step 1 script)
 First session run in CLOUD Claude Code, connected to the GitHub repo with WRITE access.
 
@@ -130,15 +156,17 @@ LESSONS (this session):
   needs overpass-api.de allowed; Step 2 needs the Census host; Step 3 the GolfCourseAPI host.
 
 ### NEXT-SESSION TO-DO (in order)
-1. **Allow `overpass-api.de`** in the environment's network policy (the only blocker to
-   real WA data). Step 2 will also need the Census host; Step 3 the GolfCourseAPI host.
-2. **Run `step1_washington.py --live`** → real WA pull → quality check (~200–350 courses,
-   White Horse present, WA-looking addresses, all coordinates NULL) → eyeball the review
-   CSV → **STOP before commit** for navigator review.
-3. **After review:** commit the real WA data, then merge the Step 1 feature branch to main.
-4. **iGolf:** take the call, get trial creds, test integrations/igolf/ vs White Horse
+1. **Manual confirmation (WA):** identify the 2 unnamed WA rows (way/679962740,
+   way/1524907585) and decide on the 3 verify-flagged rows (Redwood Golf Center,
+   Tom's Golf Center, Tin Cup Golf — keep as courses or drop as practice facilities).
+2. **Expand the directory:** run us_courses_pull.py LOCALLY for more states, clean +
+   de-dupe, load. Small enabling step: generalize load_washington_csv.py to accept any
+   --state/--csv (currently WA-specific).
+3. **iGolf:** take the call, get trial creds, test integrations/igolf/ vs White Horse
    (ground truth), confirm the 4 open questions, decide AFTER testing (don't commit on call).
-5. **Update CLAUDE-CODE-BRIEF-data-pipeline.md** to say Washington (still says Illinois in places).
+4. **Update CLAUDE-CODE-BRIEF-data-pipeline.md** to say Washington (still says Illinois in places).
+5. **Optional:** allowlist overpass-api.de in the web env if we want pulls to run
+   in-cloud instead of locally (Step 2 Census host / Step 3 GolfCourseAPI host later).
 
 ---
 
