@@ -8,6 +8,14 @@ integrations/data-pipeline/courses.db
 *.db-wal
 *.db-shm
 
+# Generated review CSVs from the pipeline (regenerable; dry-run output is mock data)
+integrations/data-pipeline/washington_courses_DRYRUN.csv
+integrations/data-pipeline/washington_courses_review.csv
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+
 # Secrets — never commit (repo is PUBLIC). API keys live in env / gitignored .env.
 .env
 .env.*

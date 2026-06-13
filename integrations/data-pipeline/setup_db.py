@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS courses (
     property_lng  REAL,                        -- NOTE: a property point is NOT a hole coordinate
     hole_count    INTEGER,                     -- 9 / 18 / 27 ...
     source_list   TEXT,                        -- where name/address came from (for the ToS report)
+    website       TEXT,                        -- course website (optional; from source)
+    notes         TEXT,                        -- free-text audit/cleaning note (optional)
     created_at    TEXT    NOT NULL,            -- ISO-8601 UTC timestamp
     updated_at    TEXT    NOT NULL
 );
