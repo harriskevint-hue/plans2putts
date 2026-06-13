@@ -1,5 +1,5 @@
 # ShadesCaddie / Plans2Putts — PROJECT STATUS
-**Last updated: June 11, 2026 (end of session 3 — strategy deep-dive)
+**Last updated: June 13, 2026 (end of session 4 — cloud Claude Code: data-pipeline Step 0 merged + Step 1 script built). Prior: June 11 (session 3 — strategy deep-dive).**
 
 > **IF YOU ARE A NEW CLAUDE SESSION:** Read this file first, then read every other
 > .md file in this repo's `docs/` folder (or root). Fetch any app file you need from
@@ -86,6 +86,61 @@ Nine-hole clubs (like Army Navy): map each nine ONCE; app assembles 18s at runti
 `{course, holes:[{hole, par, handicap, tee:{lat,lng}, green:{front,center,back:{lat,lng}}, hazards:[{label,lat,lng}], dogleg, layups:[]}], tees:{key:{label,total,holes:[yards]}}}`
 
 ## 5. IMMEDIATE TO-DO (in order)
+
+### SESSION 4 SUMMARY (June 13 — cloud Claude Code: data-pipeline Step 0 + Step 1 script)
+First session run in CLOUD Claude Code, connected to the GitHub repo with WRITE access.
+
+ACCOMPLISHED:
+- Connected cloud Claude Code to the repo with write access. This was a journey:
+  resolved a GitHub App install + a network-policy restriction — read-only at first;
+  push 403'd until the Claude GitHub App was INSTALLED (not merely authorized).
+- Expanded CLAUDE.md (now the canonical brief): launch model & paywall, a security &
+  architecture block, the Washington pivot, the LISTED-vs-PLAYABLE rule, the
+  simpler-approach working principle, and the navigator protocol.
+- Added reference bundle: claude-code-docs/CHECKPOINTING-AND-HOOKS.md and the
+  Claude-Code-Reference.pdf at the repo root.
+- Built and MERGED to main **Step 0** — the empty SQLite directory database
+  (integrations/data-pipeline/): tables courses / holes / contributors, the hard rule
+  enforced by column defaults (coords NULL, status 'unverified'), CHECK/UNIQUE
+  guardrails, the .db gitignored as a regenerable artifact, plus MIGRATION-NOTES.md.
+- Built and pushed (feature branch; NOT yet run live) **Step 1** — step1_washington.py
+  (OSM via Overpass; names + addresses; coordinates stay NULL; filters driving ranges /
+  mini-golf / unnamed; de-dupes node+way). Proven against a mock sample (10/10 self-test,
+  incl. a real end-to-end zero-coordinates check). Plus SOURCES.md (ToS report) and a
+  README update. The live pull is GATED on network access (see lessons + to-do).
+
+STRATEGY / DECISIONS (this session):
+- Launch model: FREE full rangefinder on White Horse (no account) + PAID course unlocks
+  (per-course AND annual all-access) + accounts created AT PURCHASE, via Stripe.
+  DEFERRED to a later version: mapping-credit ledger and course-referral revenue-share
+  (both money-adjacent; must be server-authoritative + fraud-resistant).
+- Pipeline first state = **Washington** (was Illinois) — coverage matches the launch wave.
+- DB = **SQLite** for the build-time pipeline (simplest tool that fits); a powerful
+  backend is deferred to Phase 4 with a documented migration path (MIGRATION-NOTES.md).
+- Source = **OSM via Overpass** (ODbL: attribution ALWAYS; share-alike ONLY if we ever
+  distribute the dataset as data — a pre-distribution checkpoint, not our plan).
+
+LESSONS (this session):
+- "Saved" means PUSHED to GitHub — the cloud container is ephemeral; uncommitted work
+  is lost when it's reclaimed.
+- Claude Code's clone can LAG GitHub (web edits / merges don't appear until you pull).
+  Pull main before assuming you're current.
+- Write access required INSTALLING the Claude GitHub App, not just authorizing it.
+- The cloud environment is NETWORK-LOCKED to GitHub by default. The live Overpass pull
+  needs overpass-api.de allowed; Step 2 needs the Census host; Step 3 the GolfCourseAPI host.
+
+### NEXT-SESSION TO-DO (in order)
+1. **Allow `overpass-api.de`** in the environment's network policy (the only blocker to
+   real WA data). Step 2 will also need the Census host; Step 3 the GolfCourseAPI host.
+2. **Run `step1_washington.py --live`** → real WA pull → quality check (~200–350 courses,
+   White Horse present, WA-looking addresses, all coordinates NULL) → eyeball the review
+   CSV → **STOP before commit** for navigator review.
+3. **After review:** commit the real WA data, then merge the Step 1 feature branch to main.
+4. **iGolf:** take the call, get trial creds, test integrations/igolf/ vs White Horse
+   (ground truth), confirm the 4 open questions, decide AFTER testing (don't commit on call).
+5. **Update CLAUDE-CODE-BRIEF-data-pipeline.md** to say Washington (still says Illinois in places).
+
+---
 
 ### SESSION 3 SUMMARY (June 11 — strategy, no new app code)
 This was a strategy + planning session. Accomplished: (a) ran GolfCourseAPI live test
