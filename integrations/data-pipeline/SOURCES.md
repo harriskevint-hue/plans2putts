@@ -47,9 +47,28 @@ out tags center;
 ```
 
 ### Retrieval status
-**NOT YET RUN AGAINST LIVE OVERPASS.** The cloud environment's network policy
-currently blocks `overpass-api.de` (HTTP 403). Logic is proven in `--dry-run`
-against a built-in mock sample. Live pull is gated until the host is allowed.
+**`step1_washington.py` (live mode) NOT YET RUN IN THIS ENVIRONMENT.** The cloud
+environment's network policy blocks `overpass-api.de` (HTTP 403); its logic is proven
+in `--dry-run` against a built-in mock sample.
+
+### How the current Washington data was actually produced (the CSV load path)
+Because Overpass is blocked here, the Washington pull was run **locally** (same
+`leisure=golf_course` Overpass approach as `step1_washington.py`), then **cleaned and
+de-duped by hand** (merged duplicate OSM records, flagged missing names). The result
+is committed at `data/washington_courses_clean.csv` (tracked, so the load is
+reproducible) and imported by `load_washington_csv.py` into `courses`.
+
+Key honesty points about this load:
+- **`lat`/`lon` in the CSV are OSM PROPERTY points (course centroids), stored in
+  `property_lat`/`property_lng`. They are NOT per-hole coordinates.** The `holes`
+  table is intentionally left **empty** — no per-hole green/tee/hazard coordinates
+  exist anywhere, so the one hard rule holds. (This is the documented "OSM point
+  first" intention for property location; it does not make any course PLAYABLE.)
+- Practice facilities (driving/golf ranges, putting/practice greens, hitting zones,
+  mini-golf) are filtered out via the shared `practice_facility_reason` rule; unnamed
+  rows are kept with an honest placeholder (never invented).
+- Current result: 255 LISTED courses (not playable — coordinates are property points
+  only). ODbL attribution (`© OpenStreetMap contributors`) is recorded per row.
 
 ### Intention for Step 2 (property location) — don't lose this
 When we do Step 2, **OSM's course `center` point becomes the FIRST source for

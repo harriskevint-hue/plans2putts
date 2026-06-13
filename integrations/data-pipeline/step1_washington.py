@@ -148,6 +148,29 @@ def element_to_candidate(el):
     }
 
 
+def practice_facility_reason(name):
+    """Name-based test for a practice facility (NOT a real course): driving/golf
+    ranges, putting/practice greens, hitting zones, mini-golf. Returns a reason
+    string or None. Used by exclusion_reason AND by the CSV loader (which has
+    names but no OSM tags), so the rule lives in one place.
+
+    Exception: a name with 'driving range'/'range' is KEPT (returns None) when it
+    also names a course ('golf course'/'golf club'/'country club') — e.g. a real
+    course that happens to have a co-located range."""
+    nl = (name or "").lower()
+    is_course = any(k in nl for k in ("golf course", "golf club", "country club"))
+    if "driving range" in nl or re.search(r"\brange\b", nl):
+        return None if is_course else "driving_range"
+    if any(k in nl for k in ("miniature golf", "mini golf", "mini-golf",
+                             "putt putt", "putt-putt", "golfland")):
+        return "mini_golf"
+    if any(k in nl for k in ("putting green", "practice green", "practice range",
+                             "practice facility", "practice area", "hitting zone",
+                             "hitting bay")):
+        return "practice"
+    return None
+
+
 def exclusion_reason(c):
     """Return a reason string if this candidate is junk, else None."""
     tags = c["tags"]
@@ -157,12 +180,7 @@ def exclusion_reason(c):
         return "driving_range"
     if tags.get("leisure") == "miniature_golf" or tags.get("golf") == "miniature_golf":
         return "mini_golf"
-    name_l = c["name"].lower()
-    if "driving range" in name_l:
-        return "driving_range"
-    if any(k in name_l for k in ("miniature golf", "mini golf", "mini-golf", "putt putt", "putt-putt")):
-        return "mini_golf"
-    return None
+    return practice_facility_reason(c["name"])
 
 
 def normalize_name(name):
@@ -243,7 +261,7 @@ def process_elements(elements):
     """Full pipeline on raw OSM elements -> (kept_records, stats)."""
     candidates = [element_to_candidate(e) for e in elements]
     stats = {"fetched": len(candidates), "unnamed": 0, "driving_range": 0,
-             "mini_golf": 0, "deduped": 0, "kept": 0}
+             "mini_golf": 0, "practice": 0, "deduped": 0, "kept": 0}
     survivors = []
     for c in candidates:
         reason = exclusion_reason(c)
