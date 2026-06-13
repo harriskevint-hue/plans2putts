@@ -12,6 +12,10 @@ integrations/data-pipeline/courses.db
 integrations/data-pipeline/washington_courses_DRYRUN.csv
 integrations/data-pipeline/washington_courses_review.csv
 
+# Raw national pull output (regenerable; the CLEANED CSV is the committed seed)
+integrations/data-pipeline/data/us_courses.csv
+integrations/data-pipeline/data/raw/
+
 # Python bytecode cache
 __pycache__/
 *.pyc
