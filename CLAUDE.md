@@ -57,8 +57,15 @@ The pipeline builds a course DIRECTORY (name → address → geocode → scoreca
 NOT working distances. It produces coverage for launch; coordinates come later from
 golfer refinement or iGolf. See CLAUDE-CODE-BRIEF-data-pipeline.md. Start small:
 Step 0 (database with the status/attribution schema) + Step 1 (ONE test state,
-Illinois) before scaling. Use only data sources whose terms permit it; report
-sources used.
+**Washington** — chosen so coverage matches the launch wave; White Horse members
+play other WA courses) before scaling. Use only data sources whose terms permit it;
+report sources used.
+
+LISTED vs PLAYABLE — do not conflate (matters for KT's course-manager outreach):
+a pipeline directory entry means a course is LISTED (name/address/scorecard,
+coordinates NULL). A course is only PLAYABLE once it has per-hole coordinates
+(from iGolf, satellite pin-placement, or a golfer mapping it). Never describe a
+listed-only course as playable/working.
 
 ## iGolf (active thread)
 iGolf (Ryan Eibner) confirmed they have Full Vector GPS data and offered trial
@@ -67,6 +74,31 @@ pre-built `integrations/igolf/` code against White Horse (KT's ground-truth
 self-mapped course), confirm the four open questions, then decide. Do not commit
 on the call.
 
+## Launch model & paywall (decided)
+First launch = simplest honest slice, then iterate (ship-then-improve):
+- FREE tier: full rangefinder on ONE course (White Horse, verified/playable). No
+  account required for free use — keep friction and stored data near zero.
+- PAID: unlock additional courses. Two mechanisms built from the start —
+  per-course/pack unlock (leads early, small catalog) AND annual all-access (lightly
+  promoted until the catalog grows). Accounts are created at PURCHASE, not for free use.
+- DEFERRED to a later version (do NOT build in v1; both are money-adjacent and must be
+  built carefully + server-authoritative + fraud-resistant): (1) mapping-credit ledger
+  (earn credit against fees by mapping), (2) course-referral revenue-share (pay a course
+  when its members subscribe). Fine to discuss with course managers now / handle manually.
+
+## Security & architecture (build securely by default)
+- SECRETS NEVER COMMITTED. Repo is PUBLIC. API keys (GolfCourseAPI, iGolf, Stripe, AWS)
+  live in environment variables / a gitignored `.env`, never hardcoded. Rotate anything
+  already exposed. Never print a secret into a committed file.
+- AUTH: use a managed provider (Cognito / Auth0 / Clerk). Never store passwords, never
+  build custom login. Account data appears only at purchase.
+- PAYMENTS: Stripe only (KT has an account). Never store or handle card data.
+- ENTITLEMENTS ARE SERVER-AUTHORITATIVE. The server decides which courses a user can
+  access; the app must NOT trust its own local copy. Same rule for any future credit/
+  referral balances — calculated and stored server-side, never trusted from the client.
+- Validate and sanitize all user/subscriber input. HTTPS only.
+- Collect minimal personal data; only what a purchase actually requires.
+
 ## How to work here
 - Orient before building; confirm understanding before writing code.
 - One contained task at a time; show your plan before big executions.
@@ -74,6 +106,28 @@ on the call.
 - Ask before modifying files KT hasn't pointed you to.
 - When unsure about strategy, flag it — KT relays strategic questions to a
   separate navigator chat that holds the project history.
+
+## Safety & review (KT is a non-programmer)
+- Review changes before committing; explain in plain language what changed and why.
+- Work in small, reversible steps. Before a large or risky change, note that KT can
+  use `/rewind` to undo, and commit a known-good state to Git first.
+- Never run destructive shell commands (rm, mv over existing files, force-push)
+  without explicitly flagging it and getting KT's OK first. Note: `/rewind` does NOT
+  undo files changed by bash commands — only direct edits.
+- Advanced features (hooks, worktrees, subagents, agent teams) are used ONLY with a
+  clear, stated reason and KT's sign-off — never by default. The project builds with
+  ordinary file editing + git.
+
+## Reference bundle + navigator protocol
+- `claude-code-docs/` holds distilled current Claude Code references (e.g.
+  CHECKPOINTING-AND-HOOKS.md) plus the Claude-Code-Reference PDF at the repo root.
+- The navigator chat cannot fetch live docs. Protocol: before the navigator writes
+  instructions that touch an advanced Claude Code feature, it NAMES the reference doc
+  it needs and KT pastes that doc into the navigator chat. KT does not need to detect
+  when an advanced topic applies — the navigator flags it and requests the doc.
+- Claude Code itself is the authority on its own current mechanics; when in doubt about
+  how a Claude Code feature works, Claude Code should rely on its own current knowledge
+  or check code.claude.com/docs rather than guessing.
 
 ## Commands & conventions
 - This is currently a static web app (HTML/JS, localStorage). Production file:
