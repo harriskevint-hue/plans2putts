@@ -102,6 +102,10 @@ First launch = simplest honest slice, then iterate (ship-then-improve):
 ## How to work here
 - Orient before building; confirm understanding before writing code.
 - One contained task at a time; show your plan before big executions.
+- Before building, briefly weigh whether there's a simpler, faster, or more
+  maintainable approach than the first/obvious one. Favor the simplest solution that
+  fully meets the requirement; name anything you're deliberately NOT building (and why)
+  to keep things lean. Flag a materially better approach before coding, not after.
 - The repo is the project's memory (survives new sessions). Commit work here.
 - Ask before modifying files KT hasn't pointed you to.
 - When unsure about strategy, flag it — KT relays strategic questions to a
