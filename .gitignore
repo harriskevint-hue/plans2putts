@@ -1,0 +1,13 @@
+# Data-pipeline database — a regenerable build-time artifact, NOT source of truth.
+# Recreate it any time with: python3 integrations/data-pipeline/setup_db.py
+# (The schema lives in setup_db.py; that script is what we version, not the .db.)
+integrations/data-pipeline/courses.db
+
+# SQLite side-files (created while the DB is open)
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Secrets — never commit (repo is PUBLIC). API keys live in env / gitignored .env.
+.env
+.env.*
