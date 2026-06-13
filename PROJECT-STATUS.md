@@ -105,8 +105,10 @@ cleaned/de-duped, then loaded via load_washington_csv.py. The cleaned CSV
 stays gitignored and is regenerable from it.
 
 **Standard method going forward:** us_courses_pull.py is the canonical RAW pull for
-all 50 states + DC (see REFRESH-COURSE-DIRECTORY.md). Cleaning, dedup review, and the
-practice-facility filter happen DOWNSTREAM at load time, not in the pull.
+all 50 states + DC (writes one us_courses.csv; see REFRESH-COURSE-DIRECTORY.md).
+Cleaning, dedup review, and the practice-facility filter happen DOWNSTREAM at load
+time, not in the pull. Its dup detection is name+proximity only, so name-variation
+duplicates (e.g. Sky Ridge) are caught at load-time review, not auto-flagged.
 
 **Open threads:** (a) iGolf trial call (Tier 2) still pending; (b) per-hole geometry
 still to come (golfer capture / iGolf) — nothing here makes a course playable;

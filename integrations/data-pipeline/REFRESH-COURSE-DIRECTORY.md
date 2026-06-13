@@ -1,69 +1,61 @@
-# Refreshing / Expanding the Course Directory (all 50 states + DC)
+# Refreshing the course directory (OpenStreetMap pull)
 
-The standard, repeatable method for building the LISTED course directory from
-OpenStreetMap. Washington was the pilot; this is how every other state is done.
+The course **directory** — where each golf course is and what it's called — comes
+from OpenStreetMap via the Overpass API. It changes slowly, so this is an
+occasional refresh (once or twice a year), not a runtime app feature. The app
+reads the pre-loaded database; it never calls Overpass during a round.
 
-> **LISTED ≠ PLAYABLE.** This pipeline produces a directory (name / address /
-> property point). A course becomes PLAYABLE only when it has per-hole coordinates,
-> which come later from a golfer's on-course capture or an iGolf license — never from
-> here. See `/CLAUDE.md` and `SOURCES.md`.
+This pull is run **outside** Claude Code, on a normal machine with open internet,
+because the Claude Code web environment blocks `overpass-api.de`. Running it
+locally sidesteps that entirely.
 
-## The three stages
+## What this gives you (and what it does not)
+- **Gives you:** a national directory — course name, location (lat/lon), and
+  whatever address/website OSM has. Good for coverage and discovery.
+- **Does NOT give you:** hole-by-hole geometry (tee boxes, greens, pin positions).
+  That is the data a yardage HUD actually reads, and it is a separate, harder
+  data problem handled by the Tier 2 (commercial API) and Tier 3 (subscriber
+  self-mapping) layers.
 
-### 1. RAW pull — `us_courses_pull.py`  (run LOCALLY)
-Canonical raw pull of `leisure=golf_course` for all 50 states + DC from OSM Overpass.
-Writes one raw CSV per state (`data/raw/<STATE>_courses_raw.csv`) with:
-`osm_type, osm_id, name, lat, lon, address, city, website, state`.
+## How to run it
+1. On your laptop (internet on), run:
+   ```
+   python us_courses_pull.py        # use python3 on macOS
+   ```
+   It queries all 50 states + DC sequentially with polite delays. Expect roughly
+   10-25 minutes. Transient rate-limit/timeout responses retry automatically.
+2. Output: `us_courses.csv`, one row per OSM golf-course record, plus a printed
+   summary (totals, missing-data counts, probable-duplicate clusters).
 
-**Runs locally**, because the Claude Code web environment's network policy blocks
-`overpass-api.de` (HTTP 403). (If `overpass-api.de` is later allowlisted in the
-environment, it can run in-cloud too.)
+## CSV columns
+`state, osm_type, osm_id, name, lat, lon, address, city, website, flag`
+- `flag` is empty for clean rows, or notes: `probable duplicate — review (...)`,
+  `missing name`, `missing coords`.
 
-```bash
-python3 us_courses_pull.py --list-states          # show coverage (51 jurisdictions)
-python3 us_courses_pull.py --print-query WA        # inspect a query, no network
-python3 us_courses_pull.py --states WA,OR          # pull specific states
-python3 us_courses_pull.py                          # pull ALL 50 + DC (polite, spaced)
-```
-RAW means no cleaning: no de-dupe, no practice-facility filtering. That is deliberate
-— the pull stays auditable and re-runnable; judgment happens downstream.
+## Handling duplicates
+At national scale you can't hand-verify every collision the way Washington was
+checked. The script **flags** probable duplicates (same name, same state,
+records within ~1 km) rather than deleting them. The Washington pattern was a
+point and a boundary mapped for the same course — usually one real course. Review
+the flagged rows, collapse the genuine duplicates, and keep any that are actually
+distinct nearby courses (Washington had one such case: Crescent Bar).
 
-### 2. Clean + de-dupe review  (human-in-the-loop)
-Turn a raw per-state CSV into a cleaned `*_courses_clean.csv` (the committed seed):
-- Merge duplicate OSM records for the same course (e.g. a node + a way, split
-  polygons, or a "… & Driving Range" annex that carries the address).
-- Flag missing names (leave them — don't invent; the loader keeps them with a
-  placeholder).
-- Add a `review` column with audit notes for any non-obvious decision.
+NOTE — duplicate detection is name + proximity only. Duplicates that differ in
+NAME (e.g. the Sky Ridge case: "Sky Ridge Golf Course" vs "Sky Ridge Golf Course
+& Driving Range") are NOT auto-flagged by this pull — they are caught at
+load-time review/cleaning instead.
 
-The cleaned CSV is what gets committed (the DB is gitignored and regenerable from it).
-Washington's seed: `data/washington_courses_clean.csv`.
+## Single-state refresh
+To refresh just one state, the companion `step1_washington.py` shows the
+single-state form. Change the `ISO3166-2` code in its query (e.g. `US-OR`) and
+run it the same way.
 
-### 3. Load — `load_washington_csv.py`
-Loads a cleaned CSV into `courses` in `courses.db`:
-- `lat`/`lon` → `property_lat`/`property_lng` (**OSM property points / centroids — NOT
-  per-hole coordinates**). The `holes` table is left empty → the hard rule holds.
-- Applies the shared **practice-facility filter** (`practice_facility_reason` in
-  `step1_washington.py`): drops driving/golf ranges, putting/practice greens, hitting
-  zones, mini-golf — but keeps a "… & Driving Range" entry that also names a real
-  course, and keeps unnamed rows with an honest placeholder.
-- Preserves `website` and `review`→`notes`; records ODbL attribution per row.
+## Importing into the database
+Do the import inside Claude Code (it needs no internet — it's just loading a
+local CSV into the Step 0 schema). Hand the cleaned CSV to Claude Code and have
+it map the rows into `courses.db` using the existing Step 1 load path, then
+report row counts and a data-quality check before committing.
 
-```bash
-python3 setup_db.py --force                 # fresh empty DB (courses/holes/contributors)
-python3 load_washington_csv.py              # loads data/washington_courses_clean.csv
-```
-
-> **Note:** `load_washington_csv.py` is currently Washington-specific (state hardcoded
-> to `WA`, default CSV path). Generalizing it to take a `--state`/`--csv` for any
-> cleaned file is a small future step when we expand beyond WA.
-
-## Status
-- **Washington: DONE** — 255 LISTED courses loaded and merged to `main` (PR #2).
-- Other states: raw pull method ready (`us_courses_pull.py`); run + clean + load
-  per state as we expand.
-
-## Licensing
-OpenStreetMap data is ODbL: attribution always (`© OpenStreetMap contributors`);
-share-alike only if we ever distribute the dataset AS DATA (a pre-distribution
-checkpoint, not our plan). Full details in `SOURCES.md`.
+## Cadence
+Quarterly or semi-annually is plenty. New courses open and old ones close rarely,
+so the directory does not drift fast.

@@ -19,12 +19,26 @@ golfer's on-course capture or an iGolf license — never from here. A LISTED cou
 | File | What it is |
 |---|---|
 | `setup_db.py` | **Step 0.** Creates the empty database `courses.db` with three tables. |
-| `step1_washington.py` | **Step 1.** Pulls Washington golf-course names + addresses from OpenStreetMap into `courses` (coordinates stay NULL). **Not yet run against live Overpass** — see status below. Also home to the shared `practice_facility_reason` filter. |
+| `step1_washington.py` | **Step 1.** Pulls Washington golf-course names + addresses from OpenStreetMap into `courses` (coordinates stay NULL). **Not yet run against live Overpass** — see status below. Also home to the shared `practice_facility_reason` filter, and the single-state pull form. |
+| `us_courses_pull.py` | **Canonical RAW national pull** for all 50 states + DC (OSM/Overpass → `us_courses.csv`). **Raw only** — cleaning, dedup review, and the practice-facility filter happen DOWNSTREAM at load time. Runs locally (Overpass blocked in the web env). See `REFRESH-COURSE-DIRECTORY.md`. |
 | `load_washington_csv.py` | **Step 1 (CSV path).** Loads a cleaned Washington CSV (pulled locally, then cleaned) into `courses`. See "Loading the cleaned Washington CSV". |
 | `data/washington_courses_clean.csv` | The cleaned Washington source data the loader reads (tracked, so the loaded rows are reproducible). |
 | `SOURCES.md` | Data-source + terms-of-service report (OSM/ODbL findings, attribution, share-alike note). |
+| `REFRESH-COURSE-DIRECTORY.md` | How to run the national raw pull and refresh the directory (procedure doc). |
 | `MIGRATION-NOTES.md` | How this maps to a future Postgres/DynamoDB backend (plan only — not built). |
 | `courses.db` | The database itself. **Not committed** (gitignored); regenerate it from the CSV. |
+
+## National raw pull — `us_courses_pull.py` (all 50 states + DC)
+`us_courses_pull.py` is the **canonical RAW pull** for the whole country: it queries
+`leisure=golf_course` for every state + DC and writes one `us_courses.csv`. It is
+**raw only** — it does NOT clean, the practice-facility filter does NOT run here, and
+its duplicate detection is **name + proximity** (same name, same state, within ~1 km),
+so it **flags** probable duplicates rather than deleting them. **Caveat:**
+name-variation duplicates (e.g. the Sky Ridge case — "Sky Ridge Golf Course" vs
+"Sky Ridge Golf Course & Driving Range") are **not** auto-flagged by the pull; they
+are caught at **load-time review** (cleaning) instead. Cleaning, dedup review, and the
+practice-facility filter all happen downstream at load time. Full procedure:
+`REFRESH-COURSE-DIRECTORY.md`.
 
 ## Step 1 — Washington course list (names + addresses)
 Source: **OpenStreetMap via the Overpass API** (ODbL — attribution required; see

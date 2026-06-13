@@ -1,166 +1,207 @@
 #!/usr/bin/env python3
 """
-ShadesCaddie / Plans2Putts — Canonical RAW course pull (all 50 states + DC).
+National golf-course directory pull from OpenStreetMap (Overpass API).
 
-Pulls golf-course entries (leisure=golf_course) from OpenStreetMap via the Overpass
-API for every US state and the District of Columbia, and writes ONE RAW CSV per
-state. This is the canonical first step of refreshing the course directory.
+Runs every US state + DC in one pass and writes a single CSV. Standalone,
+standard-library only, intended to run on a normal laptop with internet access.
+The course directory changes slowly, so this is an occasional refresh task
+(once or twice a year), not something the app does at runtime.
 
-RAW means: minimal transformation. Names + addresses + the OSM property point
-(centroid) + website, as OSM has them. NO cleaning, NO de-dupe, NO practice-facility
-filtering here — all of that happens DOWNSTREAM at load time (see
-REFRESH-COURSE-DIRECTORY.md and load_washington_csv.py). Keeping the pull raw makes
-it re-runnable and keeps the cleaning auditable/separate.
+What it produces:
+  - us_courses.csv : one row per OSM golf-course record, with a `state` column
+    and a `flag` column noting probable duplicates / missing data.
+  - a printed summary (totals, missing-data counts, probable duplicates).
 
-THE HARD RULE: the `lat`/`lon` written here are OSM PROPERTY points (course
-centroids) -> they map to property_lat/lng, which are NOT per-hole coordinates. This
-script does NOT read or emit any per-hole geometry (golf=green/tee/hazard).
-
-=============================================================================
-WHERE THIS RUNS: LOCALLY (not in the Claude Code web environment).
-=============================================================================
-The cloud environment's network policy blocks overpass-api.de (HTTP 403), so run
-this on a machine with internet access, commit the resulting cleaned CSV(s) as the
-seed, and load them with the loader. Use --print-query to inspect a query with no
-network, and --list-states to see coverage.
+It FLAGS probable duplicates rather than deleting them, because at national
+scale you can't hand-verify every collision the way we did for Washington.
+Review the flagged rows, then decide what to collapse.
 
 Usage:
-  python3 us_courses_pull.py --list-states
-  python3 us_courses_pull.py --print-query WA
-  python3 us_courses_pull.py --states WA,OR        # pull specific states
-  python3 us_courses_pull.py                        # pull ALL 50 + DC (be patient/polite)
-  python3 us_courses_pull.py --out-dir data/raw --delay 3
+    python us_courses_pull.py
+
+This takes a while: it makes ~51 sequential Overpass requests with polite
+delays, so expect roughly 10-25 minutes depending on Overpass load. Transient
+rate-limit/timeout responses are retried automatically.
+
+Requirements: Python 3.8+. No pip installs.
 """
 
-import argparse
 import csv
-import datetime
 import json
-import os
+import math
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
-OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter"
-USER_AGENT = "ShadesCaddie-DataPipeline/0.1 (golf course directory build; contact harriskevint@gmail.com)"
-HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_OUT = os.path.join(HERE, "data", "raw")
-RAW_COLUMNS = ["osm_type", "osm_id", "name", "lat", "lon", "address", "city", "website", "state"]
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OUTPUT_CSV = "us_courses.csv"
+DELAY_BETWEEN_STATES = 5          # seconds, to be polite to the public endpoint
+DUP_DISTANCE_KM = 1.0             # same-name records closer than this = probable duplicate
 
-# 50 states + DC, with ISO 3166-2 codes used by OSM boundaries.
 STATES = {
-    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas",
-    "CA": "California", "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware",
-    "DC": "District of Columbia", "FL": "Florida", "GA": "Georgia", "HI": "Hawaii",
-    "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa", "KS": "Kansas",
-    "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
-    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
-    "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada",
-    "NH": "New Hampshire", "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York",
-    "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma",
-    "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
-    "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah",
-    "VT": "Vermont", "VA": "Virginia", "WA": "Washington", "WV": "West Virginia",
-    "WI": "Wisconsin", "WY": "Wyoming",
+    "US-AL": "Alabama", "US-AK": "Alaska", "US-AZ": "Arizona", "US-AR": "Arkansas",
+    "US-CA": "California", "US-CO": "Colorado", "US-CT": "Connecticut", "US-DE": "Delaware",
+    "US-FL": "Florida", "US-GA": "Georgia", "US-HI": "Hawaii", "US-ID": "Idaho",
+    "US-IL": "Illinois", "US-IN": "Indiana", "US-IA": "Iowa", "US-KS": "Kansas",
+    "US-KY": "Kentucky", "US-LA": "Louisiana", "US-ME": "Maine", "US-MD": "Maryland",
+    "US-MA": "Massachusetts", "US-MI": "Michigan", "US-MN": "Minnesota", "US-MS": "Mississippi",
+    "US-MO": "Missouri", "US-MT": "Montana", "US-NE": "Nebraska", "US-NV": "Nevada",
+    "US-NH": "New Hampshire", "US-NJ": "New Jersey", "US-NM": "New Mexico", "US-NY": "New York",
+    "US-NC": "North Carolina", "US-ND": "North Dakota", "US-OH": "Ohio", "US-OK": "Oklahoma",
+    "US-OR": "Oregon", "US-PA": "Pennsylvania", "US-RI": "Rhode Island", "US-SC": "South Carolina",
+    "US-SD": "South Dakota", "US-TN": "Tennessee", "US-TX": "Texas", "US-UT": "Utah",
+    "US-VT": "Vermont", "US-VA": "Virginia", "US-WA": "Washington", "US-WV": "West Virginia",
+    "US-WI": "Wisconsin", "US-WY": "Wyoming", "US-DC": "District of Columbia",
 }
 
-
-def build_query(state_code):
-    return (f'[out:json][timeout:180];\n'
-            f'area["ISO3166-2"="US-{state_code}"][admin_level=4]->.st;\n'
-            f'(\n  nwr["leisure"="golf_course"](area.st);\n);\n'
-            f'out tags center;')
-
-
-def fetch_overpass(query):
-    """LIVE network call (gated by network policy; run locally)."""
-    data = urllib.parse.urlencode({"data": query}).encode()
-    req = urllib.request.Request(OVERPASS_ENDPOINT, data=data, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=300) as resp:
-        return json.load(resp).get("elements", [])
+QUERY_TMPL = """
+[out:json][timeout:120];
+area["ISO3166-2"="{code}"]->.s;
+(
+  node["leisure"="golf_course"](area.s);
+  way["leisure"="golf_course"](area.s);
+  relation["leisure"="golf_course"](area.s);
+);
+out center tags;
+"""
 
 
-def _assemble_address(tags):
-    street = " ".join(p for p in (tags.get("addr:housenumber"), tags.get("addr:street")) if p)
-    parts = [street, tags.get("addr:city"), tags.get("addr:state"), tags.get("addr:postcode")]
-    line = " ".join(p for p in parts if p).strip()
-    return line or ""
-
-
-def element_to_row(el, state_code):
-    tags = el.get("tags", {})
-    center = el.get("center") or {}
-    return {
-        "osm_type": el.get("type"),
-        "osm_id": el.get("id"),
-        "name": (tags.get("name") or "").strip(),
-        "lat": center.get("lat", el.get("lat")),
-        "lon": center.get("lon", el.get("lon")),
-        "address": _assemble_address(tags),
-        "city": tags.get("addr:city") or "",
-        "website": tags.get("website") or tags.get("contact:website") or "",
-        "state": state_code,
-    }
-
-
-def pull_state(state_code, out_dir):
-    elements = fetch_overpass(build_query(state_code))
-    rows = [element_to_row(e, state_code) for e in elements if e.get("tags")]
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"{state_code}_courses_raw.csv")
-    with open(out_path, "w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=RAW_COLUMNS)
-        w.writeheader()
-        w.writerows(rows)
-    return out_path, len(rows)
-
-
-def main(argv=None):
-    p = argparse.ArgumentParser(description="Canonical RAW OSM course pull for all 50 states + DC.")
-    p.add_argument("--states", help="Comma-separated state codes (default: all 50 + DC).")
-    p.add_argument("--out-dir", default=DEFAULT_OUT, help=f"Output dir (default: {DEFAULT_OUT}).")
-    p.add_argument("--delay", type=float, default=3.0, help="Seconds between state queries (be polite).")
-    p.add_argument("--list-states", action="store_true", help="List covered states and exit.")
-    p.add_argument("--print-query", metavar="STATE", help="Print the Overpass query for STATE and exit (no network).")
-    args = p.parse_args(argv)
-
-    if args.list_states:
-        print(f"{len(STATES)} jurisdictions (50 states + DC):")
-        for code, name in STATES.items():
-            print(f"  US-{code}  {name}")
-        return 0
-
-    if args.print_query:
-        code = args.print_query.upper()
-        if code not in STATES:
-            print(f"Unknown state code: {code}")
-            return 1
-        print(build_query(code))
-        return 0
-
-    codes = [c.strip().upper() for c in args.states.split(",")] if args.states else list(STATES)
-    unknown = [c for c in codes if c not in STATES]
-    if unknown:
-        print(f"Unknown state code(s): {', '.join(unknown)}")
-        return 1
-
-    print(f"RAW pull starting for {len(codes)} jurisdiction(s). Output -> {args.out_dir}")
-    print("(Runs LOCALLY; overpass-api.de is blocked in the Claude Code web env.)\n")
-    total = 0
-    for i, code in enumerate(codes):
+def fetch(query, retries=3):
+    data = urllib.parse.urlencode({"data": query}).encode("utf-8")
+    req = urllib.request.Request(
+        OVERPASS_URL,
+        data=data,
+        headers={"User-Agent": "plans2putts-directory-pull/1.0 (periodic US course directory refresh)"},
+    )
+    for attempt in range(retries + 1):
         try:
-            path, n = pull_state(code, args.out_dir)
-            total += n
-            print(f"  US-{code} {STATES[code]:22} -> {n:5d} raw rows  ({os.path.basename(path)})")
-        except Exception as e:  # noqa: BLE001 - report cleanly, keep going
-            print(f"  US-{code} {STATES[code]:22} -> ERROR: {type(e).__name__}: {e}")
-        if i < len(codes) - 1:
-            time.sleep(args.delay)  # Overpass fair-use: one query at a time, spaced out
-    print(f"\nDone. {total} raw rows across {len(codes)} jurisdiction(s).")
-    print("Next: clean/dedup the raw CSV(s), then load with the loader. See REFRESH-COURSE-DIRECTORY.md.")
-    return 0
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 504) and attempt < retries:
+                wait = 15 * (attempt + 1)
+                print(f"    Overpass {e.code}; waiting {wait}s and retrying...")
+                time.sleep(wait)
+                continue
+            raise
+        except urllib.error.URLError as e:
+            if attempt < retries:
+                print(f"    Network error ({e.reason}); retrying in 10s...")
+                time.sleep(10)
+                continue
+            raise
+    raise RuntimeError("Overpass request failed after retries")
+
+
+def coords_of(el):
+    if "lat" in el and "lon" in el:
+        return el["lat"], el["lon"]
+    c = el.get("center")
+    if c:
+        return c.get("lat"), c.get("lon")
+    return None, None
+
+
+def address_of(t):
+    parts = [t.get("addr:housenumber"), t.get("addr:street"), t.get("addr:city"),
+             t.get("addr:state"), t.get("addr:postcode")]
+    return " ".join(p for p in parts if p).strip()
+
+
+def dist_km(a, b):
+    la1, lo1, la2, lo2 = map(math.radians, [a[0], a[1], b[0], b[1]])
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 6371 * 2 * math.asin(math.sqrt(h))
+
+
+def main():
+    all_rows = []
+    empty_states = []
+    for i, (code, name) in enumerate(STATES.items(), 1):
+        print(f"[{i:>2}/{len(STATES)}] {name} ({code})...", end=" ", flush=True)
+        try:
+            result = fetch(QUERY_TMPL.format(code=code))
+        except Exception as e:
+            print(f"FAILED: {e}")
+            empty_states.append(name)
+            continue
+        els = result.get("elements", [])
+        for el in els:
+            tags = el.get("tags", {})
+            lat, lon = coords_of(el)
+            all_rows.append({
+                "state": name,
+                "osm_type": el.get("type", ""),
+                "osm_id": el.get("id", ""),
+                "name": tags.get("name", ""),
+                "lat": lat if lat is not None else "",
+                "lon": lon if lon is not None else "",
+                "address": address_of(tags),
+                "city": tags.get("addr:city", ""),
+                "website": tags.get("website", "") or tags.get("contact:website", ""),
+                "flag": "",
+            })
+        print(f"{len(els)} courses")
+        if not els:
+            empty_states.append(name)
+        if i < len(STATES):
+            time.sleep(DELAY_BETWEEN_STATES)
+
+    # ---- flag probable duplicates (same name + same state, centroids < 1km) ----
+    by_key = {}
+    for r in all_rows:
+        if r["name"].strip() and r["lat"] != "" and r["lon"] != "":
+            by_key.setdefault((r["state"], r["name"].strip().lower()), []).append(r)
+    dup_clusters = 0
+    for grp in by_key.values():
+        if len(grp) < 2:
+            continue
+        close = False
+        for a in range(len(grp)):
+            for b in range(a + 1, len(grp)):
+                if dist_km((float(grp[a]["lat"]), float(grp[a]["lon"])),
+                           (float(grp[b]["lat"]), float(grp[b]["lon"]))) < DUP_DISTANCE_KM:
+                    close = True
+        if close:
+            dup_clusters += 1
+            ids = ", ".join(f"{x['osm_type']}/{x['osm_id']}" for x in grp)
+            for x in grp:
+                x["flag"] = f"probable duplicate — review ({ids})"
+
+    for r in all_rows:
+        if not r["name"].strip():
+            r["flag"] = (r["flag"] + "; " if r["flag"] else "") + "missing name"
+        if r["lat"] == "" or r["lon"] == "":
+            r["flag"] = (r["flag"] + "; " if r["flag"] else "") + "missing coords"
+
+    all_rows.sort(key=lambda r: (r["state"], r["name"] == "", r["name"].lower()))
+
+    cols = ["state", "osm_type", "osm_id", "name", "lat", "lon", "address", "city", "website", "flag"]
+    with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        w.writerows(all_rows)
+
+    total = len(all_rows)
+    missing_addr = sum(1 for r in all_rows if not r["address"])
+    missing_coord = sum(1 for r in all_rows if r["lat"] == "" or r["lon"] == "")
+    unnamed = sum(1 for r in all_rows if not r["name"].strip())
+
+    print("\n" + "=" * 52)
+    print("US COURSE DIRECTORY PULL  -  SUMMARY")
+    print("=" * 52)
+    print(f"Total course records:       {total}")
+    print(f"States with 0 results:      {len(empty_states)}" +
+          (f"  -> {', '.join(empty_states)}" if empty_states else ""))
+    print(f"Rows missing an address:    {missing_addr}  ({100*missing_addr//total if total else 0}%)")
+    print(f"Rows missing coordinates:   {missing_coord}")
+    print(f"Rows with no name:          {unnamed}")
+    print(f"Probable-duplicate clusters: {dup_clusters} (rows flagged, not deleted)")
+    print(f"\nWrote {total} rows to {OUTPUT_CSV}")
+    print("Review the flagged rows, then send the CSV back for cleanup/import.")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
