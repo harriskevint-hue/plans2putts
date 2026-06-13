@@ -70,6 +70,17 @@ Key honesty points about this load:
 - Current result: 255 LISTED courses (not playable — coordinates are property points
   only). ODbL attribution (`© OpenStreetMap contributors`) is recorded per row.
 
+### National raw pull — `us_courses_pull.py` (the standard go-forward method)
+`us_courses_pull.py` is the **canonical RAW pull** for all 50 states + DC: it queries
+`leisure=golf_course` per state from OSM Overpass and writes one `us_courses.csv`.
+**Raw only** — cleaning, dedup review, and the practice-facility filter happen
+DOWNSTREAM at load time, not in the pull. Runs locally (Overpass blocked in the web
+env). **Caveat:** its duplicate detection is **name + proximity** (same name, same
+state, within ~1 km), so it *flags* probable duplicates rather than deleting them, and
+**name-variation duplicates (e.g. Sky Ridge) are NOT auto-flagged — they are caught at
+load-time review.** Same OSM/ODbL terms as above apply to everything it pulls. See
+`REFRESH-COURSE-DIRECTORY.md`.
+
 ### Intention for Step 2 (property location) — don't lose this
 When we do Step 2, **OSM's course `center` point becomes the FIRST source for
 `property_lat/lng`**, with the **US Census geocoder as the fallback** for courses
