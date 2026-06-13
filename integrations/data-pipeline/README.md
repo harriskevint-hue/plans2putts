@@ -15,12 +15,37 @@ fields **NULL** and `status = "unverified"`. Real coordinates only ever come fro
 golfer's on-course capture or an iGolf license — never from here. A LISTED course
 (name/address/scorecard) is **not** a PLAYABLE course (one with real coordinates).
 
-## What's here so far (Step 0 — schema only)
+## What's here
 | File | What it is |
 |---|---|
-| `setup_db.py` | Creates the empty database `courses.db` with three tables. |
+| `setup_db.py` | **Step 0.** Creates the empty database `courses.db` with three tables. |
+| `step1_washington.py` | **Step 1.** Pulls Washington golf-course names + addresses from OpenStreetMap into `courses` (coordinates stay NULL). **Not yet run against live Overpass** — see status below. |
+| `SOURCES.md` | Data-source + terms-of-service report (OSM/ODbL findings, attribution, share-alike note). |
 | `MIGRATION-NOTES.md` | How this maps to a future Postgres/DynamoDB backend (plan only — not built). |
 | `courses.db` | The database itself. **Not committed** (see below); regenerate it. |
+
+## Step 1 — Washington course list (names + addresses)
+Source: **OpenStreetMap via the Overpass API** (ODbL — attribution required; see
+`SOURCES.md`). Pulls `leisure=golf_course` in Washington, filters out driving ranges,
+mini-golf, and unnamed entries, de-dupes the same course appearing more than once,
+and loads names + addresses into `courses`. **No coordinates** are written
+(`property_lat/lng` stay NULL — the hard rule) and **no OSM per-hole geometry** is
+harvested.
+
+> **⚠️ LIVE-RUN STATUS: NOT YET RUN AGAINST LIVE OVERPASS.** The cloud
+> environment's network policy currently blocks `overpass-api.de` (HTTP 403). The
+> parsing / junk-filter / de-dupe logic is proven in `--dry-run` mode against a
+> small built-in **mock** sample (run `--self-test` to verify). The real pull is
+> gated until `overpass-api.de` is allowed by the network policy.
+
+```bash
+python3 integrations/data-pipeline/step1_washington.py              # DRY RUN on the mock sample (default)
+python3 integrations/data-pipeline/step1_washington.py --self-test  # assert the logic on the mock sample
+python3 integrations/data-pipeline/step1_washington.py --live       # REAL pull (needs network access; gated)
+```
+A run writes a review CSV (`washington_courses_DRYRUN.csv` in dry-run, or
+`washington_courses_review.csv` when live) for a human to eyeball before the data is
+trusted. Re-running is idempotent (it clears and reloads the state's rows).
 
 ## How to build / rebuild the database
 You need Python 3 (3.11 used here). `sqlite3` is built in — nothing to install.
