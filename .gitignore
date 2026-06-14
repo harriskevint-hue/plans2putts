@@ -16,6 +16,9 @@ integrations/data-pipeline/washington_courses_review.csv
 integrations/data-pipeline/data/us_courses.csv
 integrations/data-pipeline/data/raw/
 
+# NAIP imagery pull output (large, regenerable PNGs + metadata; not source of truth)
+integrations/data-pipeline/data/naip/
+
 # Python bytecode cache
 __pycache__/
 *.pyc
